@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TestGen AI — Automated Test Script Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ── THEME VARIABLES ─────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg:          #0a0a0f;
+  --bg2:         #111118;
+  --bg3:         #0d0d14;
+  --bg4:         #14141c;
+  --border:      rgba(255,255,255,0.06);
+  --border2:     rgba(255,255,255,0.10);
+  --text1:       #f1f5f9;
+  --text2:       #94a3b8;
+  --text3:       #475569;
+  --text4:       #1e293b;
+  --green:       #4ade80;
+  --green-bg:    rgba(74,222,128,0.08);
+  --green-bdr:   rgba(74,222,128,0.25);
+  --green-dark:  #052e16;
+  --cyan:        #06b6d4;
+  --code-text:   #64748b;
+  --shadow:      0 10px 28px rgba(0,0,0,0.4);
+}
+:root[data-theme="light"] {
+  --bg:          #f8fafc;
+  --bg2:         #ffffff;
+  --bg3:         #f1f5f9;
+  --bg4:         #e2e8f0;
+  --border:      rgba(0,0,0,0.08);
+  --border2:     rgba(0,0,0,0.14);
+  --text1:       #0f172a;
+  --text2:       #475569;
+  --text3:       #94a3b8;
+  --text4:       #cbd5e1;
+  --green:       #16a34a;
+  --green-bg:    rgba(22,163,74,0.08);
+  --green-bdr:   rgba(22,163,74,0.25);
+  --green-dark:  #f0fdf4;
+  --cyan:        #0891b2;
+  --code-text:   #334155;
+  --shadow:      0 10px 28px rgba(0,0,0,0.08);
+}
+
+/* ── RESET ───────────────────────────────────────── */
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text1);min-height:100vh;transition:background 0.3s,color 0.3s}
+
+/* ── LAYOUT ──────────────────────────────────────── */
+.wrap{max-width:820px;margin:0 auto;padding:32px 24px 80px}
+
+/* ── TOPBAR ──────────────────────────────────────── */
+.topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:48px}
+.logo{display:flex;align-items:center;gap:11px;text-decoration:none}
+.logo-mark{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--green),var(--cyan));display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 4px 12px rgba(74,222,128,0.3)}
+.logo-mark svg{width:20px;height:20px}
+.logo-words{display:flex;flex-direction:column;line-height:1.1}
+.logo-name{font-size:15px;font-weight:800;color:var(--text1);letter-spacing:-0.3px}
+.logo-tag{font-size:10px;font-weight:500;color:var(--text3);letter-spacing:0.3px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text3);background:var(--bg2);border:1px solid var(--border);border-radius:999px;padding:5px 12px}
+.status-dot{width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 6px var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+.theme-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all 0.2s;flex-shrink:0}
+.theme-btn:hover{border-color:var(--border2);background:var(--bg3)}
+
+/* ── HERO ────────────────────────────────────────── */
+.hero{text-align:center;margin-bottom:40px}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:6px;background:var(--green-bg);border:1px solid var(--green-bdr);border-radius:999px;padding:5px 16px;font-size:11px;font-weight:600;color:var(--green);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:18px}
+.hero h1{font-size:clamp(1.9rem,5vw,3rem);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:14px;color:var(--text1)}
+.hero h1 span{background:linear-gradient(135deg,var(--green) 0%,var(--cyan) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--text3);font-size:15px;line-height:1.7;max-width:460px;margin:0 auto}
+
+/* ── PROGRESS STEPS ──────────────────────────────── */
+.steps{display:flex;align-items:center;justify-content:center;margin-bottom:36px}
+.step{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text4);transition:color 0.3s}
+.step.active{color:var(--green)}
+.step.done{color:var(--text3)}
+.step-num{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--text4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;transition:all 0.3s;flex-shrink:0}
+.step.active .step-num{border-color:var(--green);background:var(--green-bg);color:var(--green)}
+.step.done .step-num{border-color:var(--text3);background:var(--bg3);color:var(--green)}
+.step-line{width:36px;height:1px;background:var(--border);margin:0 4px;flex-shrink:0;transition:background 0.3s}
+.step.done+.step-line{background:var(--text3)}
+@media(max-width:480px){.step-line{width:16px}.step span{display:none}}
+
+/* ── SECTION ─────────────────────────────────────── */
+.section{margin-bottom:20px}
+.section-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── PROVIDER ────────────────────────────────────── */
+.provider-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.provider-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;cursor:pointer;text-align:left;transition:all 0.2s;position:relative;overflow:hidden}
+.provider-card:hover{border-color:var(--border2)}
+.provider-card.active{border-color:var(--green-bdr);background:var(--green-bg)}
+.p-name{font-size:13px;font-weight:700;color:var(--text1);margin-bottom:2px}
+.p-sub{font-size:11px;color:var(--text3)}
+.p-badge{display:inline-block;margin-top:6px;font-size:10px;font-weight:600;padding:2px 8px;border-radius:4px;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr)}
+.active-check{position:absolute;top:10px;right:10px;width:17px;height:17px;background:var(--green);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:9px;color:var(--green-dark);font-weight:900}
+.provider-card.active .active-check{display:flex}
+
+/* ── TEXTAREA ────────────────────────────────────── */
+textarea{width:100%;min-height:130px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;color:var(--text1);font-size:14px;padding:14px 16px;font-family:'Inter',sans-serif;resize:vertical;line-height:1.7;outline:none;transition:all 0.2s}
+textarea:focus{border-color:var(--green-bdr);box-shadow:0 0 0 3px var(--green-bg)}
+textarea::placeholder{color:var(--text4)}
+.req-footer{display:flex;align-items:center;justify-content:space-between;margin-top:8px}
+.char-counter{font-size:11px;color:var(--text4);font-variant-numeric:tabular-nums}
+.char-counter.warn{color:#f59e0b}
+.sample-btn{font-size:11px;font-weight:600;color:var(--green);background:var(--green-bg);border:1px solid var(--green-bdr);border-radius:6px;padding:4px 12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s}
+.sample-btn:hover{opacity:0.8}
+
+/* ── FRAMEWORKS ──────────────────────────────────── */
+.fw-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.fw-count-badge{font-size:11px;font-weight:700;background:var(--green-bg);color:var(--green);border:1px solid var(--green-bdr);border-radius:999px;padding:2px 10px;transition:all 0.3s}
+.fw-count-badge.empty{background:var(--bg3);color:var(--text3);border-color:var(--border)}
+.fw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.fw-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px 8px;cursor:pointer;text-align:center;transition:all 0.2s;position:relative;user-select:none}
+.fw-card:hover{border-color:var(--border2);background:var(--bg3)}
+.fw-card.active{border-color:var(--green-bdr);background:var(--green-bg)}
+.fw-tick{position:absolute;top:7px;right:7px;width:15px;height:15px;background:var(--green);border-radius:50%;display:none;align-items:center;justify-content:center;font-size:8px;color:var(--green-dark);font-weight:900}
+.fw-card.active .fw-tick{display:flex}
+.fw-icon{font-size:22px;margin-bottom:7px}
+.fw-name{font-size:12px;font-weight:700;color:var(--text2);transition:color 0.2s}
+.fw-card.active .fw-name{color:var(--green)}
+.fw-sub{font-size:10px;color:var(--text4);margin-top:2px}
+
+/* ── LANG PILLS ──────────────────────────────────── */
+.lang-section{margin-top:12px;padding:12px 14px;background:var(--bg3);border-radius:10px;border:1px solid var(--border)}
+.lang-section-label{font-size:10px;color:var(--text3);font-weight:600;letter-spacing:0.8px;text-transform:uppercase;margin-bottom:8px}
+.lang-pills{display:flex;gap:6px;flex-wrap:wrap}
+.lang-pill{background:transparent;border:1px solid var(--border);border-radius:999px;padding:4px 14px;cursor:pointer;color:var(--text3);font-size:12px;font-weight:600;font-family:'Inter',sans-serif;transition:all 0.2s}
+.lang-pill.active{background:var(--green-bg);border-color:var(--green-bdr);color:var(--green)}
+
+/* ── INFO BANNER ─────────────────────────────────── */
+.info-banner{display:flex;align-items:flex-start;gap:10px;background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.15);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--cyan);margin-top:12px;line-height:1.6}
+
+/* ── GENERATE BUTTON ─────────────────────────────── */
+.gen-btn{width:100%;padding:15px;background:linear-gradient(135deg,var(--green),#16a34a);border:none;border-radius:12px;color:var(--green-dark);font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;margin-top:20px;display:flex;align-items:center;justify-content:center;gap:9px;transition:all 0.25s;letter-spacing:0.2px}
+.gen-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 28px rgba(74,222,128,0.2)}
+.gen-btn:active:not(:disabled){transform:translateY(0)}
+.gen-btn:disabled{opacity:0.3;cursor:not-allowed;transform:none;box-shadow:none}
+
+/* ── ERROR ───────────────────────────────────────── */
+.error-box{background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.16);border-radius:10px;padding:10px 14px;color:#fca5a5;font-size:13px;margin-top:12px;display:none}
+
+/* ── RESULTS ─────────────────────────────────────── */
+.results-panel{background:var(--bg2);border:1px solid var(--green-bdr);border-radius:16px;margin-top:24px;overflow:hidden;display:none;animation:slideUp 0.35s ease;box-shadow:var(--shadow)}
+@keyframes slideUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.results-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.results-badge{font-size:11px;font-weight:700;background:var(--green-bg);color:var(--green);border-radius:6px;padding:3px 10px;border:1px solid var(--green-bdr);white-space:nowrap}
+.summary-text{font-size:13px;color:var(--text3);flex:1}
+.fw-tab-bar{display:flex;gap:6px;padding:10px 14px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+.fw-tab{padding:5px 14px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;border-radius:6px;background:transparent;border:1px solid var(--border);font-family:'Inter',sans-serif;transition:all 0.2s;white-space:nowrap}
+.fw-tab:hover{color:var(--text2)}
+.fw-tab.active{background:var(--green-bg);border-color:var(--green-bdr);color:var(--green)}
+.tab-bar{display:flex;border-bottom:1px solid var(--border)}
+.tab{padding:11px 18px;font-size:12px;font-weight:600;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;background:none;border-left:none;border-right:none;border-top:none;font-family:'Inter',sans-serif;transition:all 0.2s;white-space:nowrap}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--green);border-bottom-color:var(--green)}
+.code-toolbar{display:flex;align-items:center;justify-content:space-between;padding:9px 16px;background:var(--bg3);border-bottom:1px solid var(--border)}
+.code-lang-badge{font-size:10px;font-weight:600;color:var(--text3);letter-spacing:1.2px;text-transform:uppercase;font-family:'JetBrains Mono',monospace}
+.toolbar-right{display:flex;gap:8px;align-items:center}
+.copy-btn,.dl-btn{background:var(--bg2);border:1px solid var(--border);border-radius:6px;color:var(--text3);cursor:pointer;font-size:11px;padding:4px 12px;font-family:'Inter',sans-serif;transition:all 0.2s;font-weight:500}
+.copy-btn:hover{color:var(--text1);border-color:var(--border2)}
+.dl-btn{color:var(--green);border-color:var(--green-bdr);background:var(--green-bg)}
+.dl-btn:hover{opacity:0.8}
+.code-wrap{display:flex;max-height:420px;background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.75;overflow:hidden}
+.line-nums{padding:18px 12px;text-align:right;color:var(--text4);background:var(--bg3);border-right:1px solid var(--border);user-select:none;flex-shrink:0;min-width:44px;overflow-y:hidden}
+.line-nums span{display:block}
+.code-content{padding:18px;color:var(--code-text);white-space:pre;flex:1;overflow:auto;min-width:0}
+
+/* ── SPINNER ─────────────────────────────────────── */
+.spinner{width:15px;height:15px;border:2px solid rgba(5,46,22,0.25);border-top-color:var(--green-dark);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── FOOTER ──────────────────────────────────────── */
+.footer{text-align:center;margin-top:44px;font-size:11px;color:var(--text4)}
+.footer a{color:var(--text3);text-decoration:none}
+.footer a:hover{color:var(--text2)}
+
+/* ── SCROLLBAR ───────────────────────────────────── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+@media(max-width:540px){
+  .fw-grid{grid-template-columns:repeat(2,1fr)}
+  .provider-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <a class="logo" href="#">
+      <div class="logo-mark">
+        <!-- TestGen Logo: lightning bolt + code brackets -->
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 6h3l-1 5h3L5 20l8-9H9l2-5H4z" fill="white" opacity="0.95"/>
+          <path d="M15 4l-1.5 3M17 4l-1.5 3" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.7"/>
+          <path d="M19 9l2 2-2 2M21 11H16" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+        </svg>
+      </div>
+      <div class="logo-words">
+        <span class="logo-name">TestGen AI</span>
+        <span class="logo-tag">Test Script Generator</span>
+      </div>
+    </a>
+    <div class="topbar-right">
+      <div class="status-pill">
+        <div class="status-dot"></div>
+        Free tier active
+      </div>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn" title="Toggle theme">🌙</button>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-eyebrow">✦ AI-Powered QA Tool</div>
+    <h1>Generate Test Scripts<br><span>in seconds</span></h1>
+    <p>Paste your requirements, pick your frameworks — get production-ready automation scripts instantly.</p>
+  </div>
+
+  <!-- PROGRESS STEPS -->
+  <div class="steps" id="stepsBar">
+    <div class="step active" id="step1"><div class="step-num">1</div><span>Requirements</span></div>
+    <div class="step-line" id="line1"></div>
+    <div class="step" id="step2"><div class="step-num">2</div><span>Frameworks</span></div>
+    <div class="step-line" id="line2"></div>
+    <div class="step" id="step3"><div class="step-num">3</div><span>Generate</span></div>
+    <div class="step-line" id="line3"></div>
+    <div class="step" id="step4"><div class="step-num">4</div><span>Results</span></div>
+  </div>
+
+  <!-- PROVIDER -->
+  <div class="section">
+    <div class="section-label">AI Provider</div>
+    <div class="provider-grid">
+      <div class="provider-card active" onclick="selectProvider('groq',this)">
+        <div class="active-check">✓</div>
+        <div class="p-name">Groq — Llama 3.3</div>
+        <div class="p-sub">console.groq.com</div>
+        <div class="p-badge">14,400 req/day free</div>
+      </div>
+      <div class="provider-card" onclick="selectProvider('gemini',this)">
+        <div class="active-check">✓</div>
+        <div class="p-name">Google Gemini 2.5</div>
+        <div class="p-sub">aistudio.google.com</div>
+        <div class="p-badge">~500 req/day free</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- REQUIREMENTS -->
+  <div class="section">
+    <div class="section-label">Requirements</div>
+    <textarea id="reqs" placeholder="Describe what to test:&#10;&#10;1. User logs in with valid credentials&#10;2. Error shown for wrong password&#10;3. Forgot password redirects to reset page" oninput="onReqInput()"></textarea>
+    <div class="req-footer">
+      <span class="char-counter" id="charCounter">0 characters</span>
+      <button class="sample-btn" onclick="fillSample()">⚡ Fill sample requirements</button>
+    </div>
+  </div>
+
+  <!-- FRAMEWORKS -->
+  <div class="section">
+    <div class="fw-header">
+      <div class="section-label" style="margin-bottom:0;flex:1">
+        Frameworks
+        <span style="font-size:10px;color:var(--text4);font-weight:400;text-transform:none;letter-spacing:0">(select one or more)</span>
+      </div>
+      <div class="fw-count-badge empty" id="fwCountBadge">0 selected</div>
+    </div>
+    <div style="height:10px"></div>
+    <div class="fw-grid">
+      <div class="fw-card" onclick="toggleFW('selenium',this)" data-fw="selenium">
+        <div class="fw-tick">✓</div>
+        <div class="fw-icon">🔬</div>
+        <div class="fw-name">Selenium</div>
+        <div class="fw-sub">BDD · Gherkin · Java</div>
+      </div>
+      <div class="fw-card" onclick="toggleFW('cypress',this)" data-fw="cypress">
+        <div class="fw-tick">✓</div>
+        <div class="fw-icon">🌲</div>
+        <div class="fw-name">Cypress</div>
+        <div class="fw-sub">JS · TypeScript</div>
+      </div>
+      <div class="fw-card" onclick="toggleFW('robot',this)" data-fw="robot">
+        <div class="fw-tick">✓</div>
+        <div class="fw-icon">🤖</div>
+        <div class="fw-name">Robot</div>
+        <div class="fw-sub">.robot files</div>
+      </div>
+      <div class="fw-card" onclick="toggleFW('playwright',this)" data-fw="playwright">
+        <div class="fw-tick">✓</div>
+        <div class="fw-icon">🎭</div>
+        <div class="fw-name">Playwright</div>
+        <div class="fw-sub">JS · TS · Python</div>
+      </div>
+    </div>
+
+    <div id="langSection" style="display:none">
+      <div class="lang-section">
+        <div class="lang-section-label">Language for Cypress / Playwright</div>
+        <div class="lang-pills" id="langRow"></div>
+      </div>
+    </div>
+
+    <div id="seleniumInfo" class="info-banner" style="display:none">
+      <span>ℹ️</span>
+      <span>Selenium generates a <strong>Gherkin Feature File</strong> (BDD/Cucumber) + <strong>Java Step Definitions</strong> in separate tabs.</span>
+    </div>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-box" id="errorBox"></div>
+
+  <!-- GENERATE -->
+  <button class="gen-btn" id="genBtn" onclick="generate()">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    Generate Test Scripts
+  </button>
+
+  <!-- RESULTS -->
+  <div class="results-panel" id="results">
+    <div class="results-header">
+      <span class="results-badge">✓ Generated</span>
+      <span class="summary-text" id="summaryBox"></span>
+    </div>
+    <div class="fw-tab-bar" id="fwTabBar"></div>
+    <div class="tab-bar" id="tabRow"></div>
+    <div class="code-toolbar">
+      <span class="code-lang-badge" id="codeLang">gherkin</span>
+      <div class="toolbar-right">
+        <button class="copy-btn" onclick="copyCode()">Copy</button>
+        <button class="dl-btn" onclick="downloadCode()">↓ Download</button>
+      </div>
+    </div>
+    <div class="code-wrap" id="codeWrap">
+      <div class="line-nums" id="lineNums"></div>
+      <div class="code-content" id="codeOut"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Build by Siva Kuntamukkala · Powered by <a href="https://console.groq.com" target="_blank">Groq</a> &amp; <a href="https://aistudio.google.com" target="_blank">Gemini</a> · Free to use
+  </div>
+</div>
+
+<script>
+// ── Theme ──────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+  localStorage.setItem('tg-theme', isDark ? 'light' : 'dark');
+}
+// Load saved theme
+(function() {
+  const saved = localStorage.getItem('tg-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  document.getElementById('themeBtn').textContent = saved === 'dark' ? '🌙' : '☀️';
+})();
+
+// ── State ──────────────────────────────────────────────
+let provider = 'groq';
+let selectedFWs = [];
+let lang = 'JavaScript';
+let allResults = {};
+let activeFW = null;
+let activeFileTab = 0;
+const fwLangs = { cypress: ['JavaScript','TypeScript'], playwright: ['JavaScript','TypeScript','Python'] };
+const SAMPLE = `1. User should be able to login with valid username and password
+2. User should see an error "Invalid credentials" for wrong password
+3. User should see "Username is required" when username field is empty
+4. User should see "Password is required" when password field is empty
+5. Password field should mask input characters
+6. Forgot Password link should redirect to the reset page
+7. After successful login, user should be redirected to the dashboard
+8. Login session should expire after 30 minutes of inactivity`;
+
+// ── Provider ───────────────────────────────────────────
+function selectProvider(p, el) {
+  provider = p;
+  document.querySelectorAll('.provider-card').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Sample ─────────────────────────────────────────────
+function fillSample() {
+  document.getElementById('reqs').value = SAMPLE;
+  onReqInput();
+}
+
+// ── Char counter ───────────────────────────────────────
+function onReqInput() {
+  const len = document.getElementById('reqs').value.length;
+  const el = document.getElementById('charCounter');
+  el.textContent = len + ' character' + (len !== 1 ? 's' : '');
+  el.className = 'char-counter' + (len > 1800 ? ' warn' : '');
+  updateSteps();
+}
+
+// ── Framework toggle ───────────────────────────────────
+function toggleFW(id, el) {
+  const idx = selectedFWs.indexOf(id);
+  if (idx === -1) selectedFWs.push(id);
+  else selectedFWs.splice(idx, 1);
+  el.classList.toggle('active');
+  updateFWBadge();
+  updateLangSection();
+  updateSeleniumInfo();
+  updateSteps();
+}
+
+function updateFWBadge() {
+  const b = document.getElementById('fwCountBadge');
+  const n = selectedFWs.length;
+  b.textContent = n + ' selected';
+  b.className = 'fw-count-badge' + (n === 0 ? ' empty' : '');
+}
+
+function updateLangSection() {
+  const needsLang = selectedFWs.some(f => fwLangs[f]);
+  const ls = document.getElementById('langSection');
+  if (needsLang) {
+    ls.style.display = 'block';
+    let langs = [];
+    selectedFWs.forEach(f => { if (fwLangs[f]) fwLangs[f].forEach(l => { if (!langs.includes(l)) langs.push(l); }); });
+    const row = document.getElementById('langRow');
+    row.innerHTML = '';
+    langs.forEach((l, i) => {
+      const b = document.createElement('button');
+      b.className = 'lang-pill' + (l === lang ? ' active' : '');
+      b.textContent = l;
+      b.onclick = () => { lang = l; document.querySelectorAll('.lang-pill').forEach(x => x.classList.remove('active')); b.classList.add('active'); };
+      row.appendChild(b);
+    });
+    if (!langs.includes(lang)) lang = langs[0] || 'JavaScript';
+  } else {
+    ls.style.display = 'none';
+  }
+}
+
+function updateSeleniumInfo() {
+  document.getElementById('seleniumInfo').style.display = selectedFWs.includes('selenium') ? 'flex' : 'none';
+}
+
+// ── Progress Steps ─────────────────────────────────────
+function updateSteps() {
+  const hasReqs = document.getElementById('reqs').value.trim().length > 0;
+  const hasFW = selectedFWs.length > 0;
+  const hasResults = Object.keys(allResults).length > 0;
+  const setStep = (id, lineId, done, active) => {
+    document.getElementById(id).className = 'step' + (done ? ' done' : active ? ' active' : '');
+    if (lineId) document.getElementById(lineId).className = 'step-line' + (done ? ' done' : '');
+  };
+  setStep('step1','line1', hasReqs, !hasReqs);
+  setStep('step2','line2', hasReqs && hasFW, hasReqs && !hasFW);
+  setStep('step3','line3', hasResults, hasReqs && hasFW && !hasResults);
+  setStep('step4', null, false, hasResults);
+}
+
+// ── Prompt builder ─────────────────────────────────────
+function buildPrompt(fw) {
+  const reqs = document.getElementById('reqs').value.trim();
+  const base = `You are an expert QA automation engineer. Respond ONLY with a raw JSON object. No markdown. No code fences. No explanation. Start with { end with }. Use \\n for line breaks inside strings.\n\nRequirements:\n${reqs}\n\n`;
+  if (fw === 'selenium')   return base + `Return: {"feature_file":"...full gherkin BDD feature file...","step_definitions":"...full Java Selenium WebDriver step definition class...","summary":"...one sentence..."}`;
+  if (fw === 'cypress')    return base + `Cypress tests in ${lang}. Return: {"test_file":"...full cypress ${lang} test code...","page_objects":"","summary":"...one sentence..."}`;
+  if (fw === 'robot')      return base + `Return: {"robot_file":"...full robot framework .robot file...","resource_file":"","summary":"...one sentence..."}`;
+  if (fw === 'playwright') return base + `Playwright in ${lang}. Return: {"test_file":"...full playwright ${lang} test code...","page_objects":"","summary":"...one sentence..."}`;
+}
+
+// ── JSON extractor ─────────────────────────────────────
+function extractJSON(text) {
+  try { return JSON.parse(text.trim()); } catch {}
+  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (m) { try { return JSON.parse(m[1].trim()); } catch {} }
+  const s = text.indexOf('{'), e = text.lastIndexOf('}');
+  if (s !== -1 && e > s) { try { return JSON.parse(text.slice(s, e + 1)); } catch {} }
+  throw new Error('Could not parse AI response');
+}
+
+// ── API call ───────────────────────────────────────────
+async function callAPI(fw) {
+  const prompt = buildPrompt(fw);
+  if (provider === 'groq') {
+    const res = await fetch('/generate/groq', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
+    const data = await res.json();
+    if (data.error) throw new Error('Groq: ' + data.error);
+    return data.text || '';
+  } else {
+    const res = await fetch('/generate/gemini', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.1, maxOutputTokens: 4096, responseMimeType: 'application/json' } }) });
+    const data = await res.json();
+    if (data.error) throw new Error('Gemini: ' + data.error.message);
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  }
+}
+
+// ── Build tabs ─────────────────────────────────────────
+function buildTabs(fw, parsed) {
+  if (fw === 'selenium') return [
+    { label: 'Feature File',      lang: 'GHERKIN', ext: 'feature', content: parsed.feature_file || '' },
+    { label: 'Step Definitions',  lang: 'JAVA',    ext: 'java',    content: parsed.step_definitions || '' }
+  ];
+  if (fw === 'robot') {
+    const t = [{ label: 'Robot File', lang: 'ROBOT', ext: 'robot', content: parsed.robot_file || '' }];
+    if (parsed.resource_file) t.push({ label: 'Resource File', lang: 'ROBOT', ext: 'robot', content: parsed.resource_file });
+    return t;
+  }
+  const ext = lang === 'Python' ? 'py' : lang === 'TypeScript' ? 'ts' : 'js';
+  const t = [{ label: 'Test File', lang: lang.toUpperCase(), ext, content: parsed.test_file || '' }];
+  if (parsed.page_objects) t.push({ label: 'Page Objects', lang: lang.toUpperCase(), ext, content: parsed.page_objects });
+  return t;
+}
+
+// ── Generate ───────────────────────────────────────────
+async function generate() {
+  const reqs = document.getElementById('reqs').value.trim();
+  const errBox = document.getElementById('errorBox');
+  errBox.style.display = 'none';
+  if (!reqs) { showError('Please enter your requirements.'); return; }
+  if (selectedFWs.length === 0) { showError('Please select at least one framework.'); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div> Generating for ' + selectedFWs.length + ' framework' + (selectedFWs.length > 1 ? 's' : '') + '...';
+  document.getElementById('results').style.display = 'none';
+  allResults = {};
+
+  const summaries = [];
+  for (const fw of selectedFWs) {
+    try {
+      const raw = await callAPI(fw);
+      const parsed = extractJSON(raw);
+      allResults[fw] = { tabs: buildTabs(fw, parsed), summary: parsed.summary || '' };
+      if (parsed.summary) summaries.push(parsed.summary);
+    } catch (e) {
+      allResults[fw] = { tabs: [{ label: 'Error', lang: 'TEXT', ext: 'txt', content: 'Error: ' + e.message }], summary: '' };
+    }
+  }
+
+  document.getElementById('summaryBox').textContent = summaries[0] || 'Scripts generated successfully';
+  activeFW = selectedFWs[0];
+  activeFileTab = 0;
+  renderFWTabs();
+  renderFileTabs();
+  renderCode();
+  document.getElementById('results').style.display = 'block';
+  updateSteps();
+
+  btn.disabled = false;
+  btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Generate Test Scripts';
+}
+
+// ── Render ─────────────────────────────────────────────
+function renderFWTabs() {
+  const bar = document.getElementById('fwTabBar');
+  bar.innerHTML = '';
+  const labels = { selenium:'🔬 Selenium', cypress:'🌲 Cypress', robot:'🤖 Robot', playwright:'🎭 Playwright' };
+  Object.keys(allResults).forEach(fw => {
+    const b = document.createElement('button');
+    b.className = 'fw-tab' + (fw === activeFW ? ' active' : '');
+    b.textContent = labels[fw] || fw;
+    b.onclick = () => { activeFW = fw; activeFileTab = 0; renderFWTabs(); renderFileTabs(); renderCode(); };
+    bar.appendChild(b);
+  });
+  bar.style.display = Object.keys(allResults).length > 1 ? 'flex' : 'none';
+}
+
+function renderFileTabs() {
+  const row = document.getElementById('tabRow');
+  row.innerHTML = '';
+  const tabs = allResults[activeFW]?.tabs || [];
+  tabs.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab' + (i === activeFileTab ? ' active' : '');
+    b.textContent = t.label;
+    b.onclick = () => { activeFileTab = i; renderFileTabs(); renderCode(); };
+    row.appendChild(b);
+  });
+  row.style.display = tabs.length > 1 ? 'flex' : 'none';
+}
+
+function renderCode() {
+  const tabs = allResults[activeFW]?.tabs || [];
+  const tab = tabs[activeFileTab];
+  if (!tab) return;
+  document.getElementById('codeLang').textContent = tab.lang;
+  const lines = tab.content.split('\n');
+  document.getElementById('lineNums').innerHTML = lines.map((_, i) => `<span>${i + 1}</span>`).join('');
+  document.getElementById('codeOut').textContent = tab.content;
+}
+
+function copyCode() {
+  const tab = (allResults[activeFW]?.tabs || [])[activeFileTab];
+  if (!tab) return;
+  navigator.clipboard.writeText(tab.content);
+  const btn = document.querySelector('.copy-btn');
+  btn.textContent = 'Copied!';
+  setTimeout(() => btn.textContent = 'Copy', 2000);
+}
+
+function downloadCode() {
+  const tab = (allResults[activeFW]?.tabs || [])[activeFileTab];
+  if (!tab) return;
+  const fname = activeFW + '_' + tab.label.toLowerCase().replace(/\s+/g,'_') + '.' + tab.ext;
+  const blob = new Blob([tab.content], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function showError(msg) {
+  const b = document.getElementById('errorBox');
+  b.textContent = '⚠ ' + msg;
+  b.style.display = 'block';
+}
+
+// Sync line numbers scroll
+document.getElementById('codeOut').addEventListener('scroll', function() {
+  document.getElementById('lineNums').scrollTop = this.scrollTop;
+});
+</script>
+</body>
+</html>
