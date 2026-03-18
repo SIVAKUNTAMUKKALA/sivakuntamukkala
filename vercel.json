@@ -55,6 +55,14 @@
       "src": "/check-links",
       "dest": "/server.js"
     },
+    { 
+      "src": "/check-links", 
+      "dest": "/server.js" 
+    },
+    { 
+      "src": "/linkchecker", 
+      "dest": "/server.js" 
+    },
     {
       "src": "/(.*)",
       "dest": "/server.js"
