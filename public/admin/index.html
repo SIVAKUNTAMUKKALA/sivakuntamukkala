@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TestGen AI — Admin Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root[data-theme="dark"]{--bg:#0a0a0f;--bg2:#111118;--bg3:#0d0d14;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.10);--text1:#f1f5f9;--text2:#94a3b8;--text3:#475569;--text4:#1e293b;--green:#4ade80;--green-bg:rgba(74,222,128,0.08);--green-bdr:rgba(74,222,128,0.25);--green-dark:#052e16;--cyan:#06b6d4;--gold:#fbbf24;--gold-bg:rgba(251,191,36,0.08);--gold-bdr:rgba(251,191,36,0.25)}
+:root[data-theme="light"]{--bg:#f8fafc;--bg2:#ffffff;--bg3:#f1f5f9;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);--text1:#0f172a;--text2:#475569;--text3:#94a3b8;--text4:#cbd5e1;--green:#16a34a;--green-bg:rgba(22,163,74,0.08);--green-bdr:rgba(22,163,74,0.25);--green-dark:#f0fdf4;--cyan:#0891b2;--gold:#d97706;--gold-bg:rgba(217,119,6,0.08);--gold-bdr:rgba(217,119,6,0.25)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text1);min-height:100vh}
+
+/* LOGIN */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:380px;background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:36px;position:relative;overflow:hidden}
+.login-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),var(--cyan))}
+.login-logo{font-size:28px;margin-bottom:8px}
+.login-title{font-size:20px;font-weight:800;color:var(--text1);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--text3);margin-bottom:24px}
+.form-group{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.form-group label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase}
+.form-group input{background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:14px;padding:11px 14px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s;width:100%}
+.form-group input:focus{border-color:var(--gold-bdr);box-shadow:0 0 0 3px var(--gold-bg)}
+.login-btn{width:100%;padding:13px;background:linear-gradient(135deg,var(--gold),#f59e0b);border:none;border-radius:10px;color:#1a0a00;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;margin-top:6px}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 20px rgba(251,191,36,0.3)}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.login-error{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 14px;color:#fca5a5;font-size:13px;margin-bottom:14px;display:none}
+
+/* DASHBOARD */
+.dashboard{display:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 32px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.topbar-logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--gold),var(--cyan));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.logo-text{font-size:14px;font-weight:800;color:var(--text1)}
+.logo-badge{font-size:10px;font-weight:700;background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-bdr);border-radius:4px;padding:2px 8px;margin-left:4px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.theme-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--bg3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}
+.refresh-btn{background:var(--green-bg);border:1px solid var(--green-bdr);border-radius:8px;color:var(--green);font-size:12px;font-weight:600;padding:6px 14px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s}
+.refresh-btn:hover{opacity:0.8}
+.logout-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:12px;padding:6px 12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s}
+.logout-btn:hover{border-color:rgba(239,68,68,0.4);color:#ef4444}
+
+/* CONTENT */
+.content{padding:28px 32px;max-width:1200px;margin:0 auto}
+.page-title{font-size:22px;font-weight:800;color:var(--text1);margin-bottom:4px}
+.page-sub{font-size:13px;color:var(--text3);margin-bottom:28px}
+
+/* STAT CARDS */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:20px;position:relative;overflow:hidden;transition:border-color 0.2s}
+.stat-card:hover{border-color:var(--border2)}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card.green::before{background:linear-gradient(90deg,var(--green),var(--cyan))}
+.stat-card.gold::before{background:linear-gradient(90deg,var(--gold),#f59e0b)}
+.stat-card.blue::before{background:linear-gradient(90deg,var(--cyan),#6366f1)}
+.stat-card.purple::before{background:linear-gradient(90deg,#b44fff,var(--cyan))}
+.stat-icon{font-size:22px;margin-bottom:10px}
+.stat-label{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;margin-bottom:6px}
+.stat-value{font-size:28px;font-weight:800;color:var(--text1);line-height:1;font-family:'JetBrains Mono',monospace}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.stat-loading{display:inline-block;width:60px;height:28px;background:var(--bg3);border-radius:6px;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%,100%{opacity:0.5}50%{opacity:1}}
+
+/* CHART */
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:24px;margin-bottom:24px}
+.card-title{font-size:14px;font-weight:700;color:var(--text1);margin-bottom:4px}
+.card-sub{font-size:12px;color:var(--text3);margin-bottom:20px}
+.chart-wrap{display:flex;align-items:flex-end;gap:8px;height:140px;padding-top:10px}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%}
+.chart-bar-container{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.chart-bar{width:100%;max-width:40px;background:linear-gradient(180deg,var(--green),rgba(74,222,128,0.4));border-radius:4px 4px 0 0;transition:height 0.8s ease;min-height:3px;position:relative}
+.chart-bar:hover{opacity:0.8}
+.chart-bar-tooltip{position:absolute;top:-28px;left:50%;transform:translateX(-50%);background:var(--bg3);border:1px solid var(--border2);border-radius:6px;padding:2px 8px;font-size:11px;color:var(--text1);white-space:nowrap;font-family:'JetBrains Mono',monospace;opacity:0;transition:opacity 0.2s;pointer-events:none}
+.chart-bar:hover .chart-bar-tooltip{opacity:1}
+.chart-label{font-size:10px;color:var(--text3);text-align:center;font-family:'JetBrains Mono',monospace}
+.chart-empty{display:flex;align-items:center;justify-content:center;height:140px;color:var(--text3);font-size:13px}
+
+/* USERS TABLE */
+.table-card{background:var(--bg2);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px}
+.table-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.table-title{font-size:14px;font-weight:700;color:var(--text1)}
+.table-count{font-size:12px;color:var(--text3);background:var(--bg3);border:1px solid var(--border);border-radius:999px;padding:2px 10px}
+table{width:100%;border-collapse:collapse}
+th{font-size:11px;font-weight:600;color:var(--text3);letter-spacing:0.8px;text-transform:uppercase;padding:10px 24px;text-align:left;border-bottom:1px solid var(--border);background:var(--bg3)}
+td{padding:12px 24px;font-size:13px;color:var(--text2);border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg3)}
+.plan-pill{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:2px 10px;border-radius:999px}
+.plan-pill.pro{background:var(--gold-bg);color:var(--gold);border:1px solid var(--gold-bdr)}
+.plan-pill.free{background:var(--bg3);color:var(--text3);border:1px solid var(--border)}
+
+/* SPINNER */
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--green);border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+@media(max-width:768px){.stats-grid{grid-template-columns:repeat(2,1fr)}.content{padding:20px 16px}.topbar{padding:16px}.table-wrap{overflow-x:auto}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">🛡️</div>
+    <div class="login-title">Admin Dashboard</div>
+    <div class="login-sub">TestGen AI · Restricted access</div>
+    <div class="login-error" id="loginError"></div>
+    <div class="form-group">
+      <label>Admin Password</label>
+      <input type="password" id="adminPassword" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')login()"/>
+    </div>
+    <button class="login-btn" id="loginBtn" onclick="login()">
+      Access Dashboard →
+    </button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div class="dashboard" id="dashboard">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="logo-icon">📊</div>
+      <span class="logo-text">TestGen AI</span>
+      <span class="logo-badge">ADMIN</span>
+    </div>
+    <div class="topbar-right">
+      <button class="refresh-btn" onclick="loadStats()">↻ Refresh</button>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <button class="logout-btn" onclick="logout()">Logout</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="page-title">Dashboard</div>
+    <div class="page-sub" id="lastUpdated">Loading stats...</div>
+
+    <!-- STAT CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card green">
+        <div class="stat-icon">👥</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value" id="statTotal"><div class="stat-loading"></div></div>
+        <div class="stat-sub">All registered accounts</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-icon">👑</div>
+        <div class="stat-label">Pro Users</div>
+        <div class="stat-value" id="statPro"><div class="stat-loading"></div></div>
+        <div class="stat-sub" id="statProSub">Paying customers</div>
+      </div>
+      <div class="stat-card blue">
+        <div class="stat-icon">🆓</div>
+        <div class="stat-label">Free Users</div>
+        <div class="stat-value" id="statFree"><div class="stat-loading"></div></div>
+        <div class="stat-sub">On free plan</div>
+      </div>
+      <div class="stat-card purple">
+        <div class="stat-icon">💰</div>
+        <div class="stat-label">Revenue / Month</div>
+        <div class="stat-value" id="statRevenue"><div class="stat-loading"></div></div>
+        <div class="stat-sub">Based on Pro users × ₹99</div>
+      </div>
+    </div>
+
+    <!-- CHART -->
+    <div class="chart-card">
+      <div class="card-title">Daily Generations</div>
+      <div class="card-sub">Test scripts generated per day — last 7 days</div>
+      <div class="chart-wrap" id="chartWrap">
+        <div class="chart-empty">Loading chart...</div>
+      </div>
+    </div>
+
+    <!-- RECENT USERS -->
+    <div class="table-card">
+      <div class="table-header">
+        <div class="table-title">Recent Signups</div>
+        <div class="table-count" id="userCount">— users</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Email</th>
+              <th>Plan</th>
+              <th>Joined</th>
+            </tr>
+          </thead>
+          <tbody id="usersTable">
+            <tr><td colspan="3" style="text-align:center;color:var(--text3);padding:24px"><span class="spinner"></span>Loading users...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let adminPassword = '';
+
+// Theme
+function toggleTheme(){const h=document.documentElement,d=h.getAttribute('data-theme')==='dark';h.setAttribute('data-theme',d?'light':'dark');document.getElementById('themeBtn').textContent=d?'🌙':'☀️';localStorage.setItem('admin-theme',d?'light':'dark')}
+(function(){const s=localStorage.getItem('admin-theme')||'dark';document.documentElement.setAttribute('data-theme',s);const b=document.getElementById('themeBtn');if(b)b.textContent=s==='dark'?'🌙':'☀️'})();
+
+// Login
+function login(){
+  const pw=document.getElementById('adminPassword').value.trim();
+  if(!pw){showError('Please enter the admin password.');return}
+  adminPassword=pw;
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true;btn.textContent='Verifying...';
+  // Test the password by calling stats
+  fetch('/admin/stats',{headers:{'x-admin-password':pw}})
+    .then(res=>{
+      if(res.status===401){showError('Incorrect password. Try again.');adminPassword='';btn.disabled=false;btn.textContent='Access Dashboard →';return}
+      return res.json().then(data=>{
+        document.getElementById('loginScreen').style.display='none';
+        document.getElementById('dashboard').style.display='block';
+        renderStats(data);
+      })
+    })
+    .catch(()=>{showError('Connection error. Try again.');btn.disabled=false;btn.textContent='Access Dashboard →'})
+}
+
+function showError(msg){const e=document.getElementById('loginError');e.textContent='⚠ '+msg;e.style.display='block'}
+function logout(){adminPassword='';document.getElementById('loginScreen').style.display='flex';document.getElementById('dashboard').style.display='none';document.getElementById('adminPassword').value=''}
+
+// Load Stats
+async function loadStats(){
+  try{
+    const res=await fetch('/admin/stats',{headers:{'x-admin-password':adminPassword}});
+    if(res.status===401){logout();return}
+    const data=await res.json();
+    renderStats(data);
+  }catch(e){console.error(e)}
+}
+
+function renderStats(data){
+  // Update last refreshed
+  document.getElementById('lastUpdated').textContent='Last updated: '+new Date().toLocaleTimeString();
+
+  // Stat cards
+  document.getElementById('statTotal').textContent=data.totalUsers;
+  document.getElementById('statPro').textContent=data.proUsers;
+  document.getElementById('statProSub').textContent=data.proUsers===1?'1 paying customer':data.proUsers+' paying customers';
+  document.getElementById('statFree').textContent=data.freeUsers;
+  document.getElementById('statRevenue').textContent='₹'+data.revenueINR.toLocaleString('en-IN');
+  document.getElementById('userCount').textContent=data.recentUsers.length+' users';
+
+  // Chart
+  renderChart(data.dailyGenerations);
+
+  // Users table
+  renderTable(data.recentUsers);
+}
+
+function renderChart(dailyData){
+  const wrap=document.getElementById('chartWrap');
+  const entries=Object.entries(dailyData);
+  if(entries.length===0){wrap.innerHTML='<div class="chart-empty">No generation data yet</div>';return}
+
+  // Fill last 7 days
+  const days=[];
+  for(let i=6;i>=0;i--){
+    const d=new Date();d.setDate(d.getDate()-i);
+    const key=d.toISOString().split('T')[0];
+    const label=d.toLocaleDateString('en',{weekday:'short'});
+    days.push({key,label,count:dailyData[key]||0});
+  }
+
+  const max=Math.max(...days.map(d=>d.count),1);
+  wrap.innerHTML=days.map(d=>`
+    <div class="chart-bar-wrap">
+      <div class="chart-bar-container">
+        <div class="chart-bar" style="height:${Math.max((d.count/max)*100,2)}%">
+          <div class="chart-bar-tooltip">${d.count} gen${d.count!==1?'s':''}</div>
+        </div>
+      </div>
+      <div class="chart-label">${d.label}</div>
+    </div>
+  `).join('');
+}
+
+function renderTable(users){
+  const tbody=document.getElementById('usersTable');
+  if(!users||users.length===0){tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:24px">No users yet</td></tr>';return}
+  tbody.innerHTML=users.map(u=>`
+    <tr>
+      <td style="color:var(--text1);font-weight:500">${u.email}</td>
+      <td><span class="plan-pill ${u.plan==='pro'?'pro':'free'}">${u.plan==='pro'?'👑 Pro':'Free'}</span></td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${new Date(u.created_at).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</td>
+    </tr>
+  `).join('');
+}
+
+// Enter key on password field
+document.getElementById('adminPassword').addEventListener('keydown',e=>{if(e.key==='Enter')login()});
+
+// Auto refresh every 60 seconds
+setInterval(()=>{if(adminPassword)loadStats()},60000);
+</script>
+</body>
+</html>
