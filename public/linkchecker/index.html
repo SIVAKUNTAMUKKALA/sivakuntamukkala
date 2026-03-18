@@ -17,16 +17,17 @@
 body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden}
 body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
 .wrap{max-width:1100px;margin:0 auto;padding:48px 24px 80px;position:relative;z-index:1}
-.header{margin-bottom:40px}
 .nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px}
 .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
 .nav-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#00e5ff,#7c3aed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
 .nav-logo-text{font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--text)}
 .nav-back{font-size:12px;color:var(--muted);text-decoration:none;transition:color .2s;letter-spacing:.05em}
 .nav-back:hover{color:var(--accent)}
+.header{margin-bottom:40px}
 .eyebrow{font-size:11px;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;margin-bottom:12px;opacity:.8}
 h1{font-family:var(--font-display);font-size:clamp(36px,6vw,64px);font-weight:800;line-height:1;letter-spacing:-.02em;background:linear-gradient(135deg,var(--text) 0%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
 .subtitle{color:var(--muted);font-size:13px}
+.free-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(0,230,118,.1);border:1px solid rgba(0,230,118,.25);border-radius:999px;padding:4px 14px;font-size:11px;color:var(--green);font-weight:700;letter-spacing:.05em;margin-top:10px}
 .url-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden}
 .url-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
 .url-row{display:flex;gap:12px;align-items:stretch}
@@ -44,9 +45,10 @@ h1{font-family:var(--font-display);font-size:clamp(36px,6vw,64px);font-weight:80
 @keyframes spin{to{transform:rotate(360deg)}}
 .load-msg{font-size:13px;color:var(--muted);flex:1}
 .load-msg b{color:var(--accent)}
-.progress{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;max-width:200px}
-.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));width:35%;border-radius:2px;animation:prog 1.4s ease-in-out infinite}
-@keyframes prog{0%{transform:translateX(-250%)}100%{transform:translateX(500%)}}
+.progress-wrap{flex:1;max-width:200px}
+.progress{height:3px;background:var(--border);border-radius:2px;overflow:hidden}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;transition:width .3s ease}
+.prog-text{font-size:10px;color:var(--muted);margin-top:4px;text-align:right}
 .err-box{display:none;background:rgba(255,23,68,.08);border:1px solid rgba(255,23,68,.3);border-radius:12px;padding:14px 18px;font-size:13px;color:#ff6b8a;margin-bottom:16px;line-height:1.6}
 .err-box.show{display:block}
 .summary{display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;margin-bottom:16px;gap:20px;align-items:center;flex-wrap:wrap}
@@ -98,7 +100,6 @@ tr:hover td{background:rgba(255,255,255,.012)}
 <body>
 <div class="wrap">
 
-  <!-- NAV -->
   <div class="nav">
     <a class="nav-logo" href="/">
       <div class="nav-logo-icon">⚡</div>
@@ -108,9 +109,10 @@ tr:hover td{background:rgba(255,255,255,.012)}
   </div>
 
   <div class="header">
-    <div class="eyebrow">// diagnostic tool v4.0</div>
+    <div class="eyebrow">// diagnostic tool v5.0</div>
     <h1>Link Checker</h1>
-    <p class="subtitle">Scan any webpage for broken, redirected, and working links — powered by Claude AI.</p>
+    <p class="subtitle">Scan any webpage for broken, redirected, and working links — fast & free.</p>
+    <div class="free-badge">✅ 100% Free · No AI · Unlimited Scans · Server-verified</div>
   </div>
 
   <div class="url-card">
@@ -125,8 +127,11 @@ tr:hover td{background:rgba(255,255,255,.012)}
 
   <div class="loading" id="loading">
     <div class="spin"></div>
-    <div class="load-msg"><b id="loadMsg">Connecting…</b></div>
-    <div class="progress"><div class="prog-bar"></div></div>
+    <div class="load-msg"><b id="loadMsg">Fetching page…</b></div>
+    <div class="progress-wrap">
+      <div class="progress"><div class="prog-bar" id="progBar" style="width:0%"></div></div>
+      <div class="prog-text" id="progText"></div>
+    </div>
   </div>
 
   <div class="err-box" id="errBox"></div>
@@ -161,7 +166,6 @@ tr:hover td{background:rgba(255,255,255,.012)}
 <script>
 let allLinks=[], activeFilter='all';
 
-/* ── helpers ── */
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function showErr(msg){const b=document.getElementById('errBox');b.innerHTML='⚠️ '+msg;b.classList.add('show');}
 function hideErr(){document.getElementById('errBox').classList.remove('show');}
@@ -171,51 +175,37 @@ function setLoad(on,msg){
   if(on){el.classList.add('show');if(msg)document.getElementById('loadMsg').textContent=msg;}
   else el.classList.remove('show');
 }
+function setProgress(pct,text){
+  document.getElementById('progBar').style.width=pct+'%';
+  if(text)document.getElementById('progText').textContent=text;
+}
 function clearUI(){
   allLinks=[];activeFilter='all';
   document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',i===0));
   ['summary','controls','tblWrap'].forEach(id=>document.getElementById(id).classList.remove('show'));
   document.getElementById('tbody').innerHTML='';
+  setProgress(0,'');
 }
 
-/* ── extract JSON array from messy text ── */
-function extractArr(s){
-  s=s.replace(/```json\s*/gi,'').replace(/```\s*/gi,'');
-  let i=0;
-  while((i=s.indexOf('[',i))!==-1){
-    let depth=0,inStr=false,esc2=false,j=i;
-    for(;j<s.length;j++){
-      const c=s[j];
-      if(esc2){esc2=false;continue;}
-      if(c==='\\'){esc2=true;continue;}
-      if(c==='"'){inStr=!inStr;continue;}
-      if(inStr)continue;
-      if(c==='[')depth++;
-      if(c===']'){depth--;if(depth===0)break;}
-    }
-    const candidate=s.slice(i,j+1);
-    try{const arr=JSON.parse(candidate);if(Array.isArray(arr)&&arr.length>0)return arr;}catch(_){}
-    i++;
-  }
-  return null;
-}
-
-/* ── main ── */
 async function runCheck(){
   const targetUrl=document.getElementById('urlInput').value.trim();
   if(!targetUrl){showErr('Please enter a URL to scan.');return;}
+  if(!targetUrl.startsWith('http')){showErr('Please enter a full URL starting with https://');return;}
   clearUI();hideErr();
-  setLoad(true,'Fetching page via AI…');
+  setLoad(true,'Scanning links…');
+  setProgress(10,'Sending to server…');
 
   try{
-    setLoad(true,'Claude is reading the page and checking links…');
+    document.getElementById('loadMsg').textContent='Fetching page and checking all links…';
+    setProgress(20,'Server is fetching the page…');
 
-    // Call our backend — no API key needed in frontend!
     const res=await fetch('/check-links',{
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({targetUrl})
     });
+
+    setProgress(80,'Processing results…');
 
     if(!res.ok){
       const err=await res.json().catch(()=>({}));
@@ -223,45 +213,39 @@ async function runCheck(){
     }
 
     const data=await res.json();
-
     if(data.error) throw new Error(data.error);
-
-    let links=extractArr(data.text||'');
-
-    if(!links||links.length===0){
-      throw new Error(`Could not extract links from <b>${esc(targetUrl)}</b>. The page may have no links, may be bot-protected, or Claude couldn't reach it.`);
+    if(!data.links||data.links.length===0){
+      throw new Error(`No links found on <b>${esc(targetUrl)}</b>. The page may have no anchor tags or may require JavaScript to render.`);
     }
 
-    allLinks=links.filter(l=>l&&l.url).map(l=>({
-      url:String(l.url).trim(),
-      text:String(l.text||l.url).trim().slice(0,120)||String(l.url),
-      status:['working','redirect','broken'].includes(l.status)?l.status:'broken',
-      code:Number(l.code)||0
-    }));
-
+    allLinks=data.links;
+    setProgress(100,'Done!');
     renderTable();
+
   }catch(e){
-    showErr(e.message||'Unexpected error.');
+    showErr(e.message||'Unexpected error. Please try again.');
   }finally{
     setLoad(false);
   }
 }
 
-/* ── render ── */
 function renderTable(){
   const rows=activeFilter==='all'?allLinks:allLinks.filter(l=>l.status===activeFilter);
   const tbody=document.getElementById('tbody');
   tbody.innerHTML='';
-  if(!rows.length){tbody.innerHTML='<tr><td colspan="4"><div class="empty-row">No links match this filter.</div></td></tr>';}
-  else rows.forEach(l=>{
-    const tr=document.createElement('tr');
-    tr.className=l.status==='working'?'rw':l.status==='broken'?'rb':'rd';
-    const badge=l.status==='working'?'<span class="badge bw">✅ Working</span>':l.status==='redirect'?'<span class="badge bd">⚠️ Redirected</span>':'<span class="badge bb">❌ Broken</span>';
-    const cc=l.code>=200&&l.code<300?'c2':l.code>=300&&l.code<400?'c3':l.code>=400&&l.code<500?'c4':l.code>=500?'c5':'c0';
-    const eu=esc(l.url),et=esc(l.text);
-    tr.innerHTML=`<td class="url-cell"><a href="${eu}" target="_blank" rel="noopener" title="${eu}">${eu}</a></td><td class="txt-cell" title="${et}">${et}</td><td>${badge}</td><td class="code-cell ${cc}">${l.code>0?l.code:'—'}</td>`;
-    tbody.appendChild(tr);
-  });
+  if(!rows.length){
+    tbody.innerHTML='<tr><td colspan="4"><div class="empty-row">No links match this filter.</div></td></tr>';
+  } else {
+    rows.forEach(l=>{
+      const tr=document.createElement('tr');
+      tr.className=l.status==='working'?'rw':l.status==='broken'?'rb':'rd';
+      const badge=l.status==='working'?'<span class="badge bw">✅ Working</span>':l.status==='redirect'?'<span class="badge bd">⚠️ Redirected</span>':'<span class="badge bb">❌ Broken</span>';
+      const cc=l.code>=200&&l.code<300?'c2':l.code>=300&&l.code<400?'c3':l.code>=400&&l.code<500?'c4':l.code>=500?'c5':'c0';
+      const eu=esc(l.url),et=esc(l.text);
+      tr.innerHTML=`<td class="url-cell"><a href="${eu}" target="_blank" rel="noopener" title="${eu}">${eu}</a></td><td class="txt-cell" title="${et}">${et}</td><td>${badge}</td><td class="code-cell ${cc}">${l.code>0?l.code:'—'}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
   const w=allLinks.filter(l=>l.status==='working').length;
   const b=allLinks.filter(l=>l.status==='broken').length;
   const d=allLinks.filter(l=>l.status==='redirect').length;
