@@ -230,6 +230,10 @@ app.post("/cancel-subscription", requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+// ── Serve Razorpay Key safely to frontend ──────────
+app.get("/config", (req, res) => {
+  res.json({ razorpay_key: process.env.RAZORPAY_KEY_ID });
+});
 app.listen(PORT, () => {
   console.log(`\n✅ TestGen AI running!`);
   console.log(`👉 Open http://localhost:${PORT}\n`);
