@@ -131,7 +131,7 @@ tr:hover td{background:var(--bg3)}
     <div class="topbar-right">
       <button class="refresh-btn" onclick="loadStats()">↻ Refresh</button>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
-      <button class="logout-btn" onclick="logout()">Logout</button>
+      <button class="-btn" onclick="()"></button>
     </div>
   </div>
 
@@ -228,7 +228,7 @@ function login(){
 }
 
 function showError(msg){const e=document.getElementById('loginError');e.textContent='⚠ '+msg;e.style.display='block'}
-function logout(){adminPassword='';document.getElementById('loginScreen').style.display='flex';document.getElementById('dashboard').style.display='none';document.getElementById('adminPassword').value=''}
+function logout(){adminPassword='';document.getElementById('loginScreen').style.display='flex';document.getElementById('dashboard').style.display='none';document.getElementById('adminPassword').value='';const btn=document.getElementById('loginBtn');btn.disabled=false;btn.textContent='Access Dashboard →'}
 
 // Load Stats
 async function loadStats(){
