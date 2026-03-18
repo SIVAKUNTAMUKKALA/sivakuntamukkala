@@ -1,40 +1,49 @@
 require("dotenv").config();
-const Razorpay = require("razorpay");
-const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const fetch = require("node-fetch");
 const path = require("path");
+const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+const Razorpay = require("razorpay");
+const Anthropic = require("@anthropic-ai/sdk");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-// Serve portfolio explicitly at root
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "index.html"));
-});
 
-// Serve testgen app
-app.get("/testgen", (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "testgen", "index.html"));
-});
-
-// Serve static assets
-app.use(express.static(path.join(__dirname, "public")));
-app.use("/testgen", express.static(path.join(__dirname, "public/testgen")));
-
-// Supabase admin client
+// ── Supabase ───────────────────────────────────────
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const FREE_LIMIT = 10; // generations per day
+// ── Razorpay ───────────────────────────────────────
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
+
+// ── Anthropic ──────────────────────────────────────
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const FREE_LIMIT = 10;
+
+// ── Static Files ───────────────────────────────────
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+app.get("/testgen", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "testgen", "index.html"));
+});
+app.get("/admin", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "admin", "index.html"));
+});
+app.get("/linkchecker", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "linkchecker", "index.html"));
+});
+app.use(express.static(path.join(__dirname, "public")));
+app.use("/testgen", express.static(path.join(__dirname, "public/testgen")));
 
 // ── Auth Middleware ────────────────────────────────
 async function requireAuth(req, res, next) {
@@ -55,27 +64,11 @@ async function requireAuth(req, res, next) {
 async function checkUsage(req, res, next) {
   const userId = req.user.id;
   const today = new Date().toISOString().split("T")[0];
-
-  // Get or create usage record for today
-  const { data, error } = await supabase
-    .from("usage")
-    .select("count")
-    .eq("user_id", userId)
-    .eq("date", today)
-    .single();
-
+  const { data } = await supabase.from("usage").select("count").eq("user_id", userId).eq("date", today).single();
   const currentCount = data?.count || 0;
-
-  // Get user plan
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", userId)
-    .single();
-
+  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", userId).single();
   const plan = profile?.plan || "free";
   const limit = plan === "pro" ? 999999 : FREE_LIMIT;
-
   if (currentCount >= limit) {
     return res.status(429).json({
       error: `Daily limit reached (${limit}/day on ${plan} plan). Upgrade to Pro for unlimited generations.`,
@@ -83,7 +76,6 @@ async function checkUsage(req, res, next) {
       limit
     });
   }
-
   req.currentCount = currentCount;
   req.today = today;
   next();
@@ -96,6 +88,15 @@ async function incrementUsage(userId, today, currentCount) {
     date: today,
     count: currentCount + 1
   }, { onConflict: "user_id,date" });
+}
+
+// ── Admin Middleware ───────────────────────────────
+function requireAdmin(req, res, next) {
+  const password = req.headers["x-admin-password"];
+  if (password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  next();
 }
 
 // ── Groq Route ─────────────────────────────────────
@@ -140,26 +141,20 @@ app.post("/generate/gemini", requireAuth, checkUsage, async (req, res) => {
   }
 });
 
-// ── Usage Stats Route ──────────────────────────────
+// ── Usage Stats ────────────────────────────────────
 app.get("/usage", requireAuth, async (req, res) => {
   const today = new Date().toISOString().split("T")[0];
-  const { data } = await supabase
-    .from("usage")
-    .select("count")
-    .eq("user_id", req.user.id)
-    .eq("date", today)
-    .single();
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("plan")
-    .eq("id", req.user.id)
-    .single();
+  const { data } = await supabase.from("usage").select("count").eq("user_id", req.user.id).eq("date", today).single();
+  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", req.user.id).single();
   const plan = profile?.plan || "free";
   const limit = plan === "pro" ? 999999 : FREE_LIMIT;
   res.json({ count: data?.count || 0, limit, plan });
 });
 
-const PORT = process.env.PORT || 3000;
+// ── Config (Razorpay Key) ──────────────────────────
+app.get("/config", (req, res) => {
+  res.json({ razorpay_key: process.env.RAZORPAY_KEY_ID });
+});
 
 // ── Create Subscription ────────────────────────────
 app.post("/create-subscription", requireAuth, async (req, res) => {
@@ -176,31 +171,23 @@ app.post("/create-subscription", requireAuth, async (req, res) => {
   }
 });
 
-// ── Verify Payment & Upgrade User ─────────────────
+// ── Verify Payment ─────────────────────────────────
 app.post("/verify-payment", requireAuth, async (req, res) => {
   const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
   try {
-    // Verify signature
     const text = razorpay_payment_id + "|" + razorpay_subscription_id;
     const generated_signature = crypto
       .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
       .update(text)
       .digest("hex");
-
     if (generated_signature !== razorpay_signature) {
       return res.status(400).json({ error: "Invalid payment signature" });
     }
-
-    // Upgrade user to pro in Supabase
-    await supabase
-      .from("profiles")
-      .update({
-        plan: "pro",
-        subscription_id: razorpay_subscription_id,
-        payment_id: razorpay_payment_id
-      })
-      .eq("id", req.user.id);
-
+    await supabase.from("profiles").update({
+      plan: "pro",
+      subscription_id: razorpay_subscription_id,
+      payment_id: razorpay_payment_id
+    }).eq("id", req.user.id);
     res.json({ success: true, plan: "pro" });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -210,78 +197,29 @@ app.post("/verify-payment", requireAuth, async (req, res) => {
 // ── Cancel Subscription ────────────────────────────
 app.post("/cancel-subscription", requireAuth, async (req, res) => {
   try {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("subscription_id")
-      .eq("id", req.user.id)
-      .single();
-
+    const { data: profile } = await supabase.from("profiles").select("subscription_id").eq("id", req.user.id).single();
     if (profile?.subscription_id) {
       await razorpay.subscriptions.cancel(profile.subscription_id);
     }
-
-    await supabase
-      .from("profiles")
-      .update({ plan: "free", subscription_id: null })
-      .eq("id", req.user.id);
-
+    await supabase.from("profiles").update({ plan: "free", subscription_id: null }).eq("id", req.user.id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
-// ── Serve Razorpay Key safely to frontend ──────────
-app.get("/config", (req, res) => {
-  res.json({ razorpay_key: process.env.RAZORPAY_KEY_ID });
-});
-// ── Admin Auth Middleware ──────────────────────────
-function requireAdmin(req, res, next) {
-  const password = req.headers['x-admin-password'];
-  if (password !== process.env.ADMIN_PASSWORD) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
-  next();
-}
 
 // ── Admin Stats ────────────────────────────────────
 app.get("/admin/stats", requireAdmin, async (req, res) => {
   try {
-    // Total users
-    const { count: totalUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    // Pro users
-    const { count: proUsers } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true })
-      .eq('plan', 'pro');
-
-    // Recent signups (last 10)
-    const { data: recentUsers } = await supabase
-      .from('profiles')
-      .select('email, plan, created_at')
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    // Daily generations last 7 days
+    const { count: totalUsers } = await supabase.from("profiles").select("*", { count: "exact", head: true });
+    const { count: proUsers } = await supabase.from("profiles").select("*", { count: "exact", head: true }).eq("plan", "pro");
+    const { data: recentUsers } = await supabase.from("profiles").select("email, plan, created_at").order("created_at", { ascending: false }).limit(10);
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const { data: dailyUsage } = await supabase
-      .from('usage')
-      .select('date, count')
-      .gte('date', sevenDaysAgo.toISOString().split('T')[0])
-      .order('date', { ascending: true });
-
-    // Aggregate daily totals
+    const { data: dailyUsage } = await supabase.from("usage").select("date, count").gte("date", sevenDaysAgo.toISOString().split("T")[0]).order("date", { ascending: true });
     const dailyTotals = {};
-    dailyUsage?.forEach(row => {
-      dailyTotals[row.date] = (dailyTotals[row.date] || 0) + row.count;
-    });
-
-    // Revenue (pro users * 99)
+    dailyUsage?.forEach(row => { dailyTotals[row.date] = (dailyTotals[row.date] || 0) + row.count; });
     const revenueINR = (proUsers || 0) * 99;
-
     res.json({
       totalUsers: totalUsers || 0,
       proUsers: proUsers || 0,
@@ -296,16 +234,12 @@ app.get("/admin/stats", requireAdmin, async (req, res) => {
 });
 
 // ── Link Checker ───────────────────────────────────
-const Anthropic = require("@anthropic-ai/sdk");
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 app.post("/check-links", async (req, res) => {
   const { targetUrl } = req.body;
   if (!targetUrl) return res.status(400).json({ error: "URL is required" });
-
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-4-20250514",
       max_tokens: 8000,
       tools: [{ type: "web_search_20250305", name: "web_search" }],
       messages: [{
@@ -316,28 +250,24 @@ Step 1: Use web_search to visit this URL and retrieve its content: ${targetUrl}
 Step 2: From the page content, extract every hyperlink (<a href>) you can find.
 Step 3: For each link determine if it is reachable (working=2xx, redirect=3xx, broken=4xx/5xx/unreachable).
 
-After you have gathered the information output ONLY a JSON array like this (no other text, no markdown):
-[{"url":"https://example.com/page","text":"Link Label","status":"working","code":200}]
+Output ONLY a JSON array, no markdown, no explanation:
+[{"url":"https://example.com","text":"Label","status":"working","code":200}]
 
 Rules:
 - Resolve relative URLs using base: ${targetUrl}
 - Max 30 unique links
-- Use "broken" with code 0 for unreachable links
-- Output ONLY the raw JSON array, nothing else`
+- Use "broken" with code 0 for unreachable links`
       }]
     });
-
-    // Extract text from response
-    const text = response.content
-      .filter(b => b.type === "text")
-      .map(b => b.text)
-      .join("\n");
-
+    const text = response.content.filter(b => b.type === "text").map(b => b.text).join("\n");
     res.json({ text });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── Start Server ───────────────────────────────────
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`\n✅ TestGen AI running!`);
   console.log(`👉 Open http://localhost:${PORT}\n`);
