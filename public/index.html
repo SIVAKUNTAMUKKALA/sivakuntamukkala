@@ -363,8 +363,6 @@ document.querySelectorAll('.skill-bar').forEach(b=>b.style.width='0%');
 window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>50));
 function toggleMenu(){document.getElementById('mobileMenu').classList.toggle('open')}
 function submitForm(){const name=document.getElementById('fname').value.trim(),email=document.getElementById('femail').value.trim(),msg=document.getElementById('fmessage').value.trim();if(!name||!email||!msg){alert('Please fill in your name, email, and message.');return}document.getElementById('formFields').style.display='none';document.getElementById('formSuccess').style.display='block'}
-// ── Boot ───────────────────────────────────────────────
-initAuth();
 </script>
 </body>
 </html>
