@@ -1,9 +1,15 @@
 require("dotenv").config();
+const Razorpay = require("razorpay");
+const crypto = require("crypto");
 const express = require("express");
 const cors = require("cors");
 const fetch = require("node-fetch");
 const path = require("path");
 const { createClient } = require("@supabase/supabase-js");
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
+});
 
 const app = express();
 app.use(cors());
@@ -154,6 +160,76 @@ app.get("/usage", requireAuth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// ── Create Subscription ────────────────────────────
+app.post("/create-subscription", requireAuth, async (req, res) => {
+  try {
+    const subscription = await razorpay.subscriptions.create({
+      plan_id: process.env.RAZORPAY_PLAN_ID,
+      customer_notify: 1,
+      total_count: 12,
+      notes: { user_id: req.user.id, email: req.user.email }
+    });
+    res.json({ subscription_id: subscription.id });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Verify Payment & Upgrade User ─────────────────
+app.post("/verify-payment", requireAuth, async (req, res) => {
+  const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = req.body;
+  try {
+    // Verify signature
+    const text = razorpay_payment_id + "|" + razorpay_subscription_id;
+    const generated_signature = crypto
+      .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+      .update(text)
+      .digest("hex");
+
+    if (generated_signature !== razorpay_signature) {
+      return res.status(400).json({ error: "Invalid payment signature" });
+    }
+
+    // Upgrade user to pro in Supabase
+    await supabase
+      .from("profiles")
+      .update({
+        plan: "pro",
+        subscription_id: razorpay_subscription_id,
+        payment_id: razorpay_payment_id
+      })
+      .eq("id", req.user.id);
+
+    res.json({ success: true, plan: "pro" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── Cancel Subscription ────────────────────────────
+app.post("/cancel-subscription", requireAuth, async (req, res) => {
+  try {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("subscription_id")
+      .eq("id", req.user.id)
+      .single();
+
+    if (profile?.subscription_id) {
+      await razorpay.subscriptions.cancel(profile.subscription_id);
+    }
+
+    await supabase
+      .from("profiles")
+      .update({ plan: "free", subscription_id: null })
+      .eq("id", req.user.id);
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`\n✅ TestGen AI running!`);
   console.log(`👉 Open http://localhost:${PORT}\n`);
