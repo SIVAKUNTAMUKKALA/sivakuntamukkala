@@ -6,7 +6,6 @@ const path = require("path");
 const crypto = require("crypto");
 const { createClient } = require("@supabase/supabase-js");
 const Razorpay = require("razorpay");
-const Anthropic = require("@anthropic-ai/sdk");
 
 const app = express();
 app.use(cors());
@@ -23,9 +22,6 @@ const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
-
-// ── Anthropic ──────────────────────────────────────
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 const FREE_LIMIT = 10;
 
@@ -151,7 +147,7 @@ app.get("/usage", requireAuth, async (req, res) => {
   res.json({ count: data?.count || 0, limit, plan });
 });
 
-// ── Config (Razorpay Key) ──────────────────────────
+// ── Config ─────────────────────────────────────────
 app.get("/config", (req, res) => {
   res.json({ razorpay_key: process.env.RAZORPAY_KEY_ID });
 });
@@ -234,33 +230,83 @@ app.get("/admin/stats", requireAdmin, async (req, res) => {
 });
 
 // ── Link Checker ───────────────────────────────────
+// Fetches page HTML on server (no CORS!) then checks each link
 app.post("/check-links", async (req, res) => {
   const { targetUrl } = req.body;
   if (!targetUrl) return res.status(400).json({ error: "URL is required" });
+
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 8000,
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-      messages: [{
-        role: "user",
-        content: `You are a link checker.
-
-Step 1: Use web_search to visit this URL and retrieve its content: ${targetUrl}
-Step 2: From the page content, extract every hyperlink (<a href>) you can find.
-Step 3: For each link determine if it is reachable (working=2xx, redirect=3xx, broken=4xx/5xx/unreachable).
-
-Output ONLY a JSON array, no markdown, no explanation:
-[{"url":"https://example.com","text":"Label","status":"working","code":200}]
-
-Rules:
-- Resolve relative URLs using base: ${targetUrl}
-- Max 30 unique links
-- Use "broken" with code 0 for unreachable links`
-      }]
+    // Step 1: Fetch the target page HTML
+    const pageRes = await fetch(targetUrl, {
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; LinkChecker/1.0)" },
+      redirect: "follow",
+      timeout: 15000
     });
-    const text = response.content.filter(b => b.type === "text").map(b => b.text).join("\n");
-    res.json({ text });
+    if (!pageRes.ok) {
+      return res.status(400).json({ error: `Could not fetch page: ${pageRes.status} ${pageRes.statusText}` });
+    }
+    const html = await pageRes.text();
+    const baseUrl = new URL(targetUrl);
+
+    // Step 2: Extract all links
+    const linkRegex = /<a\s+[^>]*href\s*=\s*["']([^"'#][^"']*)["'][^>]*>([\s\S]*?)<\/a>/gi;
+    const links = [];
+    const seen = new Set();
+    let match;
+    while ((match = linkRegex.exec(html)) !== null) {
+      let href = match[1].trim();
+      const rawText = match[2].replace(/<[^>]+>/g, "").trim().slice(0, 120) || href;
+      if (href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) continue;
+      try {
+        const resolved = new URL(href, baseUrl).href;
+        if (!resolved.startsWith("http")) continue;
+        if (seen.has(resolved)) continue;
+        seen.add(resolved);
+        links.push({ url: resolved, text: rawText });
+        if (links.length >= 50) break;
+      } catch (_) { continue; }
+    }
+
+    if (links.length === 0) {
+      return res.json({ links: [] });
+    }
+
+    // Step 3: Check each link on server (no CORS restrictions!)
+    const results = await Promise.all(
+      links.map(async (link) => {
+        try {
+          const r = await fetch(link.url, {
+            method: "HEAD",
+            headers: { "User-Agent": "Mozilla/5.0 (compatible; LinkChecker/1.0)" },
+            redirect: "manual",
+            timeout: 10000
+          });
+          let status = "working";
+          if (r.status >= 300 && r.status < 400) status = "redirect";
+          else if (r.status >= 400) status = "broken";
+          return { url: link.url, text: link.text, status, code: r.status };
+        } catch (e) {
+          // If HEAD fails try GET
+          try {
+            const r = await fetch(link.url, {
+              method: "GET",
+              headers: { "User-Agent": "Mozilla/5.0 (compatible; LinkChecker/1.0)" },
+              redirect: "manual",
+              timeout: 10000
+            });
+            let status = "working";
+            if (r.status >= 300 && r.status < 400) status = "redirect";
+            else if (r.status >= 400) status = "broken";
+            return { url: link.url, text: link.text, status, code: r.status };
+          } catch (_) {
+            return { url: link.url, text: link.text, status: "broken", code: 0 };
+          }
+        }
+      })
+    );
+
+    res.json({ links: results });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
