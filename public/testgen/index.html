@@ -408,28 +408,32 @@ function toggleTheme(){const h=document.documentElement,d=h.getAttribute('data-t
 
 // ── Auth State ─────────────────────────────────────────
 let currentUser=null, currentToken=null;
-
 async function initAuth(){
+  // Check URL for recovery token FIRST
+  const hash=window.location.hash;
+  const params=new URLSearchParams(window.location.search);
+  const isRecovery=hash.includes('type=recovery')||params.get('type')==='recovery';
+
   const {data:{session}}=await sb.auth.getSession();
-  if(session){
-    currentUser=session.user;currentToken=session.access_token;
-    const hash=window.location.hash;
-    if(hash.includes('type=recovery')){
-      showAuth();
-      document.getElementById('loginForm').style.display='none';
-      document.getElementById('forgotForm').style.display='none';
-      document.getElementById('resetForm').style.display='block';
-      return;
-    }
-    showApp();
+
+  if(isRecovery){
+    showAuth();
+    document.getElementById('loginForm').style.display='none';
+    document.getElementById('signupForm').style.display='none';
+    document.querySelector('.auth-tabs').style.display='none';
+    document.getElementById('forgotForm').style.display='none';
+    document.getElementById('resetForm').style.display='block';
+    if(session){currentUser=session.user;currentToken=session.access_token;}
+    return;
   }
+
+  if(session){currentUser=session.user;currentToken=session.access_token;showApp()}
   else{showAuth()}
   sb.auth.onAuthStateChange((_,session)=>{
     if(session){currentUser=session.user;currentToken=session.access_token;showApp()}
     else{currentUser=null;currentToken=null;showAuth()}
   });
 }
-
 function showAuth(){document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none'}
 
 async function showApp(){
