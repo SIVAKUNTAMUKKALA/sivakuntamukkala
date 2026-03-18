@@ -8,6 +8,26 @@
   ],
   "routes": [
     {
+      "src": "/generate/groq",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/generate/gemini",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/usage",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/testgen",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/testgen/(.*)",
+      "dest": "/server.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/server.js"
     }
