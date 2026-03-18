@@ -458,13 +458,16 @@ async function handleSignup(){
 // ── Password Reset ────────────────────────────────────────
 function showForgotPassword(){
   document.getElementById('loginForm').style.display='none';
+  document.getElementById('signupForm').style.display='none';
   document.getElementById('forgotForm').style.display='block';
+  document.querySelector('.auth-tabs').style.display='none';
   clearAuthMessages();
 }
 function showLogin(){
   document.getElementById('forgotForm').style.display='none';
   document.getElementById('resetForm').style.display='none';
   document.getElementById('loginForm').style.display='block';
+  document.querySelector('.auth-tabs').style.display='flex';
   clearAuthMessages();
 }
 async function handleForgotPassword(){
