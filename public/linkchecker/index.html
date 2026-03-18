@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LinkRadar — Website Link Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:#2a2a38;
+  --accent:#00e5ff;--accent2:#7c3aed;
+  --green:#00e676;--red:#ff1744;--yellow:#ffd600;
+  --text:#e8e8f0;--muted:#6b6b80;
+  --font-display:'Syne',sans-serif;--font-mono:'Space Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{max-width:1100px;margin:0 auto;padding:48px 24px 80px;position:relative;z-index:1}
+.header{margin-bottom:40px}
+.nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:40px}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-logo-icon{width:32px;height:32px;background:linear-gradient(135deg,#00e5ff,#7c3aed);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px}
+.nav-logo-text{font-family:var(--font-display);font-size:14px;font-weight:800;color:var(--text)}
+.nav-back{font-size:12px;color:var(--muted);text-decoration:none;transition:color .2s;letter-spacing:.05em}
+.nav-back:hover{color:var(--accent)}
+.eyebrow{font-size:11px;letter-spacing:.25em;color:var(--accent);text-transform:uppercase;margin-bottom:12px;opacity:.8}
+h1{font-family:var(--font-display);font-size:clamp(36px,6vw,64px);font-weight:800;line-height:1;letter-spacing:-.02em;background:linear-gradient(135deg,var(--text) 0%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:10px}
+.subtitle{color:var(--muted);font-size:13px}
+.url-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;margin-bottom:16px;position:relative;overflow:hidden}
+.url-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent2),var(--accent))}
+.url-row{display:flex;gap:12px;align-items:stretch}
+.url-wrap{flex:1;position:relative}
+.url-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+#urlInput{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text);font-family:var(--font-mono);font-size:14px;padding:14px 16px 14px 44px;outline:none;transition:border-color .2s,box-shadow .2s}
+#urlInput:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,229,255,.1)}
+#urlInput::placeholder{color:var(--muted)}
+.btn{background:linear-gradient(135deg,var(--accent2),var(--accent));border:none;border-radius:10px;color:#fff;font-family:var(--font-display);font-size:14px;font-weight:600;padding:14px 28px;cursor:pointer;white-space:nowrap;transition:opacity .2s,transform .15s;letter-spacing:.02em}
+.btn:hover:not(:disabled){opacity:.9;transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.loading{display:none;align-items:center;gap:16px;padding:20px 24px;background:var(--surface);border:1px solid var(--border);border-radius:16px;margin-bottom:16px}
+.loading.show{display:flex}
+.spin{width:22px;height:22px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+@keyframes spin{to{transform:rotate(360deg)}}
+.load-msg{font-size:13px;color:var(--muted);flex:1}
+.load-msg b{color:var(--accent)}
+.progress{flex:1;height:3px;background:var(--border);border-radius:2px;overflow:hidden;max-width:200px}
+.prog-bar{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));width:35%;border-radius:2px;animation:prog 1.4s ease-in-out infinite}
+@keyframes prog{0%{transform:translateX(-250%)}100%{transform:translateX(500%)}}
+.err-box{display:none;background:rgba(255,23,68,.08);border:1px solid rgba(255,23,68,.3);border-radius:12px;padding:14px 18px;font-size:13px;color:#ff6b8a;margin-bottom:16px;line-height:1.6}
+.err-box.show{display:block}
+.summary{display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px 24px;margin-bottom:16px;gap:20px;align-items:center;flex-wrap:wrap}
+.summary.show{display:flex}
+.sum-title{font-family:var(--font-display);font-size:20px;font-weight:800;flex:1;min-width:140px}
+.sum-title small{font-family:var(--font-mono);font-size:10px;font-weight:400;color:var(--muted);display:block;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.pills{display:flex;gap:10px;flex-wrap:wrap}
+.pill{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:8px 14px;font-size:13px;border:1px solid var(--border)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.pill-w .dot{background:var(--green)}.pill-r .dot{background:var(--red)}.pill-d .dot{background:var(--yellow)}
+.cnt{font-family:var(--font-display);font-weight:800;font-size:16px}
+.pill-w .cnt{color:var(--green)}.pill-r .cnt{color:var(--red)}.pill-d .cnt{color:var(--yellow)}
+.controls{display:none;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap}
+.controls.show{display:flex}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:4px}
+.tab{background:transparent;border:none;border-radius:7px;color:var(--muted);font-family:var(--font-mono);font-size:12px;padding:7px 16px;cursor:pointer;transition:background .15s,color .15s;letter-spacing:.04em}
+.tab.active{background:var(--surface2);color:var(--text)}
+.tab:hover:not(.active){color:var(--text)}
+.csv-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--muted);font-family:var(--font-mono);font-size:12px;padding:8px 16px;cursor:pointer;transition:border-color .2s,color .2s;display:flex;align-items:center;gap:8px}
+.csv-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tbl-wrap{display:none;background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.tbl-wrap.show{display:block}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--surface2);border-bottom:1px solid var(--border)}
+th{text-align:left;padding:12px 16px;font-family:var(--font-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:400}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid rgba(42,42,56,.5);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr.rw{border-left:2px solid var(--green);background:rgba(0,230,118,.015)}
+tr.rb{border-left:2px solid var(--red);background:rgba(255,23,68,.02)}
+tr.rd{border-left:2px solid var(--yellow);background:rgba(255,214,0,.015)}
+tr:hover td{background:rgba(255,255,255,.012)}
+.url-cell{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.url-cell a{color:var(--accent);text-decoration:none;font-size:12px;opacity:.85;transition:opacity .15s}
+.url-cell a:hover{opacity:1;text-decoration:underline}
+.txt-cell{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--muted)}
+.badge{display:inline-flex;align-items:center;gap:6px;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+.bw{background:rgba(0,230,118,.12);color:var(--green)}
+.bb{background:rgba(255,23,68,.12);color:var(--red)}
+.bd{background:rgba(255,214,0,.12);color:var(--yellow)}
+.code-cell{font-family:var(--font-mono);font-size:12px}
+.c2{color:var(--green)}.c3{color:var(--yellow)}.c4,.c5{color:var(--red)}.c0{color:var(--muted)}
+.empty-row{text-align:center;padding:60px 20px;color:var(--muted);font-size:13px}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--surface)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+@media(max-width:600px){.url-row{flex-direction:column}th:nth-child(2),td:nth-child(2),th:nth-child(4),td:nth-child(4){display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- NAV -->
+  <div class="nav">
+    <a class="nav-logo" href="/">
+      <div class="nav-logo-icon">⚡</div>
+      <span class="nav-logo-text">TestGen AI</span>
+    </a>
+    <a class="nav-back" href="/">← Back to portfolio</a>
+  </div>
+
+  <div class="header">
+    <div class="eyebrow">// diagnostic tool v4.0</div>
+    <h1>Link Checker</h1>
+    <p class="subtitle">Scan any webpage for broken, redirected, and working links — powered by Claude AI.</p>
+  </div>
+
+  <div class="url-card">
+    <div class="url-row">
+      <div class="url-wrap">
+        <span class="url-icon">🔗</span>
+        <input type="url" id="urlInput" placeholder="https://example.com" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn" id="checkBtn" onclick="runCheck()">Check Links</button>
+    </div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spin"></div>
+    <div class="load-msg"><b id="loadMsg">Connecting…</b></div>
+    <div class="progress"><div class="prog-bar"></div></div>
+  </div>
+
+  <div class="err-box" id="errBox"></div>
+
+  <div class="summary" id="summary">
+    <div class="sum-title"><small>Scan Complete</small><span id="sumText">—</span></div>
+    <div class="pills">
+      <div class="pill pill-w"><div class="dot"></div><span class="cnt" id="cntW">0</span><span>Working</span></div>
+      <div class="pill pill-d"><div class="dot"></div><span class="cnt" id="cntD">0</span><span>Redirected</span></div>
+      <div class="pill pill-r"><div class="dot"></div><span class="cnt" id="cntB">0</span><span>Broken</span></div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls">
+    <div class="tabs">
+      <button class="tab active" onclick="setFilter('all',this)">All</button>
+      <button class="tab" onclick="setFilter('working',this)">Working</button>
+      <button class="tab" onclick="setFilter('redirect',this)">Redirected</button>
+      <button class="tab" onclick="setFilter('broken',this)">Broken</button>
+    </div>
+    <button class="csv-btn" onclick="exportCSV()">⬇ Export CSV</button>
+  </div>
+
+  <div class="tbl-wrap" id="tblWrap">
+    <table>
+      <thead><tr><th>URL</th><th>Link Text</th><th>Status</th><th>Code</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let allLinks=[], activeFilter='all';
+
+/* ── helpers ── */
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showErr(msg){const b=document.getElementById('errBox');b.innerHTML='⚠️ '+msg;b.classList.add('show');}
+function hideErr(){document.getElementById('errBox').classList.remove('show');}
+function setLoad(on,msg){
+  const el=document.getElementById('loading');
+  document.getElementById('checkBtn').disabled=on;
+  if(on){el.classList.add('show');if(msg)document.getElementById('loadMsg').textContent=msg;}
+  else el.classList.remove('show');
+}
+function clearUI(){
+  allLinks=[];activeFilter='all';
+  document.querySelectorAll('.tab').forEach((b,i)=>b.classList.toggle('active',i===0));
+  ['summary','controls','tblWrap'].forEach(id=>document.getElementById(id).classList.remove('show'));
+  document.getElementById('tbody').innerHTML='';
+}
+
+/* ── extract JSON array from messy text ── */
+function extractArr(s){
+  s=s.replace(/```json\s*/gi,'').replace(/```\s*/gi,'');
+  let i=0;
+  while((i=s.indexOf('[',i))!==-1){
+    let depth=0,inStr=false,esc2=false,j=i;
+    for(;j<s.length;j++){
+      const c=s[j];
+      if(esc2){esc2=false;continue;}
+      if(c==='\\'){esc2=true;continue;}
+      if(c==='"'){inStr=!inStr;continue;}
+      if(inStr)continue;
+      if(c==='[')depth++;
+      if(c===']'){depth--;if(depth===0)break;}
+    }
+    const candidate=s.slice(i,j+1);
+    try{const arr=JSON.parse(candidate);if(Array.isArray(arr)&&arr.length>0)return arr;}catch(_){}
+    i++;
+  }
+  return null;
+}
+
+/* ── main ── */
+async function runCheck(){
+  const targetUrl=document.getElementById('urlInput').value.trim();
+  if(!targetUrl){showErr('Please enter a URL to scan.');return;}
+  clearUI();hideErr();
+  setLoad(true,'Fetching page via AI…');
+
+  try{
+    setLoad(true,'Claude is reading the page and checking links…');
+
+    // Call our backend — no API key needed in frontend!
+    const res=await fetch('/check-links',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({targetUrl})
+    });
+
+    if(!res.ok){
+      const err=await res.json().catch(()=>({}));
+      throw new Error(err.error||`Server error: ${res.status}`);
+    }
+
+    const data=await res.json();
+
+    if(data.error) throw new Error(data.error);
+
+    let links=extractArr(data.text||'');
+
+    if(!links||links.length===0){
+      throw new Error(`Could not extract links from <b>${esc(targetUrl)}</b>. The page may have no links, may be bot-protected, or Claude couldn't reach it.`);
+    }
+
+    allLinks=links.filter(l=>l&&l.url).map(l=>({
+      url:String(l.url).trim(),
+      text:String(l.text||l.url).trim().slice(0,120)||String(l.url),
+      status:['working','redirect','broken'].includes(l.status)?l.status:'broken',
+      code:Number(l.code)||0
+    }));
+
+    renderTable();
+  }catch(e){
+    showErr(e.message||'Unexpected error.');
+  }finally{
+    setLoad(false);
+  }
+}
+
+/* ── render ── */
+function renderTable(){
+  const rows=activeFilter==='all'?allLinks:allLinks.filter(l=>l.status===activeFilter);
+  const tbody=document.getElementById('tbody');
+  tbody.innerHTML='';
+  if(!rows.length){tbody.innerHTML='<tr><td colspan="4"><div class="empty-row">No links match this filter.</div></td></tr>';}
+  else rows.forEach(l=>{
+    const tr=document.createElement('tr');
+    tr.className=l.status==='working'?'rw':l.status==='broken'?'rb':'rd';
+    const badge=l.status==='working'?'<span class="badge bw">✅ Working</span>':l.status==='redirect'?'<span class="badge bd">⚠️ Redirected</span>':'<span class="badge bb">❌ Broken</span>';
+    const cc=l.code>=200&&l.code<300?'c2':l.code>=300&&l.code<400?'c3':l.code>=400&&l.code<500?'c4':l.code>=500?'c5':'c0';
+    const eu=esc(l.url),et=esc(l.text);
+    tr.innerHTML=`<td class="url-cell"><a href="${eu}" target="_blank" rel="noopener" title="${eu}">${eu}</a></td><td class="txt-cell" title="${et}">${et}</td><td>${badge}</td><td class="code-cell ${cc}">${l.code>0?l.code:'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  const w=allLinks.filter(l=>l.status==='working').length;
+  const b=allLinks.filter(l=>l.status==='broken').length;
+  const d=allLinks.filter(l=>l.status==='redirect').length;
+  const t=allLinks.length;
+  document.getElementById('sumText').textContent=`${t} link${t!==1?'s':''} found`;
+  document.getElementById('cntW').textContent=w;
+  document.getElementById('cntB').textContent=b;
+  document.getElementById('cntD').textContent=d;
+  ['summary','controls','tblWrap'].forEach(id=>document.getElementById(id).classList.add('show'));
+}
+
+function setFilter(f,btn){
+  activeFilter=f;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function exportCSV(){
+  if(!allLinks.length)return;
+  const rows=[['URL','Link Text','Status','HTTP Code']];
+  allLinks.forEach(l=>rows.push([`"${l.url.replace(/"/g,'""')}"`,`"${l.text.replace(/"/g,'""')}"`,l.status,l.code||'']));
+  const blob=new Blob([rows.map(r=>r.join(',')).join('\n')],{type:'text/csv'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='link-check-results.csv';a.click();
+}
+
+document.getElementById('urlInput').addEventListener('keydown',e=>{if(e.key==='Enter')runCheck();});
+</script>
+</body>
+</html>
