@@ -234,6 +234,66 @@ app.post("/cancel-subscription", requireAuth, async (req, res) => {
 app.get("/config", (req, res) => {
   res.json({ razorpay_key: process.env.RAZORPAY_KEY_ID });
 });
+// ── Admin Auth Middleware ──────────────────────────
+function requireAdmin(req, res, next) {
+  const password = req.headers['x-admin-password'];
+  if (password !== process.env.ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  next();
+}
+
+// ── Admin Stats ────────────────────────────────────
+app.get("/admin/stats", requireAdmin, async (req, res) => {
+  try {
+    // Total users
+    const { count: totalUsers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true });
+
+    // Pro users
+    const { count: proUsers } = await supabase
+      .from('profiles')
+      .select('*', { count: 'exact', head: true })
+      .eq('plan', 'pro');
+
+    // Recent signups (last 10)
+    const { data: recentUsers } = await supabase
+      .from('profiles')
+      .select('email, plan, created_at')
+      .order('created_at', { ascending: false })
+      .limit(10);
+
+    // Daily generations last 7 days
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const { data: dailyUsage } = await supabase
+      .from('usage')
+      .select('date, count')
+      .gte('date', sevenDaysAgo.toISOString().split('T')[0])
+      .order('date', { ascending: true });
+
+    // Aggregate daily totals
+    const dailyTotals = {};
+    dailyUsage?.forEach(row => {
+      dailyTotals[row.date] = (dailyTotals[row.date] || 0) + row.count;
+    });
+
+    // Revenue (pro users * 99)
+    const revenueINR = (proUsers || 0) * 99;
+
+    res.json({
+      totalUsers: totalUsers || 0,
+      proUsers: proUsers || 0,
+      freeUsers: (totalUsers || 0) - (proUsers || 0),
+      revenueINR,
+      recentUsers: recentUsers || [],
+      dailyGenerations: dailyTotals
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`\n✅ TestGen AI running!`);
   console.log(`👉 Open http://localhost:${PORT}\n`);
