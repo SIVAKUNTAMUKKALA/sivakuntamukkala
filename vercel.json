@@ -30,6 +30,22 @@
     {
       "src": "/(.*)",
       "dest": "/server.js"
+    },
+    {
+      "src": "/config",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/create-subscription",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/verify-payment",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/cancel-subscription",
+      "dest": "/server.js"
     }
   ]
 }
