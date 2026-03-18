@@ -362,7 +362,33 @@ document.querySelectorAll('.skills-grid').forEach(el=>barObserver.observe(el));
 document.querySelectorAll('.skill-bar').forEach(b=>b.style.width='0%');
 window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',window.scrollY>50));
 function toggleMenu(){document.getElementById('mobileMenu').classList.toggle('open')}
-function submitForm(){const name=document.getElementById('fname').value.trim(),email=document.getElementById('femail').value.trim(),msg=document.getElementById('fmessage').value.trim();if(!name||!email||!msg){alert('Please fill in your name, email, and message.');return}document.getElementById('formFields').style.display='none';document.getElementById('formSuccess').style.display='block'}
+async function submitForm(){
+  const name=document.getElementById('fname').value.trim(),
+        email=document.getElementById('femail').value.trim(),
+        subject=document.getElementById('fsubject').value.trim(),
+        budget=document.getElementById('fbudget').value.trim(),
+        msg=document.getElementById('fmessage').value.trim();
+  if(!name||!email||!msg){alert('Please fill in your name, email, and message.');return}
+  const btn=document.querySelector('.form-submit');
+  btn.textContent='Sending...';btn.disabled=true;
+  try{
+    const res=await fetch('https://formspree.io/f/xojkpggr',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Accept':'application/json'},
+      body:JSON.stringify({name,email,subject,budget,message:msg})
+    });
+    if(res.ok){
+      document.getElementById('formFields').style.display='none';
+      document.getElementById('formSuccess').style.display='block';
+    } else {
+      alert('Something went wrong. Please try again.');
+      btn.textContent='Send message';btn.disabled=false;
+    }
+  } catch(e){
+    alert('Network error. Please try again.');
+    btn.textContent='Send message';btn.disabled=false;
+  }
+}
 </script>
 </body>
 </html>
