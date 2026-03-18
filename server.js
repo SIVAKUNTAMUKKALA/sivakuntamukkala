@@ -294,6 +294,50 @@ app.get("/admin/stats", requireAdmin, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// ── Link Checker ───────────────────────────────────
+const Anthropic = require("@anthropic-ai/sdk");
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+app.post("/check-links", async (req, res) => {
+  const { targetUrl } = req.body;
+  if (!targetUrl) return res.status(400).json({ error: "URL is required" });
+
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-4-6",
+      max_tokens: 8000,
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      messages: [{
+        role: "user",
+        content: `You are a link checker.
+
+Step 1: Use web_search to visit this URL and retrieve its content: ${targetUrl}
+Step 2: From the page content, extract every hyperlink (<a href>) you can find.
+Step 3: For each link determine if it is reachable (working=2xx, redirect=3xx, broken=4xx/5xx/unreachable).
+
+After you have gathered the information output ONLY a JSON array like this (no other text, no markdown):
+[{"url":"https://example.com/page","text":"Link Label","status":"working","code":200}]
+
+Rules:
+- Resolve relative URLs using base: ${targetUrl}
+- Max 30 unique links
+- Use "broken" with code 0 for unreachable links
+- Output ONLY the raw JSON array, nothing else`
+      }]
+    });
+
+    // Extract text from response
+    const text = response.content
+      .filter(b => b.type === "text")
+      .map(b => b.text)
+      .join("\n");
+
+    res.json({ text });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 app.listen(PORT, () => {
   console.log(`\n✅ TestGen AI running!`);
   console.log(`👉 Open http://localhost:${PORT}\n`);
