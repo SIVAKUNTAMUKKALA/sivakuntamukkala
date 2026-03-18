@@ -318,3 +318,123 @@ app.listen(PORT, () => {
   console.log(`\n✅ TestGen AI running!`);
   console.log(`👉 Open http://localhost:${PORT}\n`);
 });
+
+// ── Resume Generator ───────────────────────────────────
+const RESUME_FREE_LIMIT = 3;
+
+app.get("/usage-resume", requireAuth, async (req, res) => {
+  const today = new Date().toISOString().split("T")[0];
+  const { data } = await supabase.from("usage_resume").select("count").eq("user_id", req.user.id).eq("date", today).single();
+  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", req.user.id).single();
+  const plan = profile?.plan || "free";
+  const limit = plan === "pro" ? 999999 : RESUME_FREE_LIMIT;
+  res.json({ count: data?.count || 0, limit, plan });
+});
+
+app.post("/generate-resume", requireAuth, async (req, res) => {
+  const today = new Date().toISOString().split("T")[0];
+
+  // Check usage
+  const { data: usageData } = await supabase.from("usage_resume").select("count").eq("user_id", req.user.id).eq("date", today).single();
+  const { data: profile } = await supabase.from("profiles").select("plan").eq("id", req.user.id).single();
+  const plan = profile?.plan || "free";
+  const limit = plan === "pro" ? 999999 : RESUME_FREE_LIMIT;
+  const currentCount = usageData?.count || 0;
+
+  if (currentCount >= limit) {
+    return res.status(429).json({ error: `Daily limit reached (${limit}/day). Upgrade to Pro for unlimited resumes.` });
+  }
+
+  const { name, title, email, phone, location, linkedin, github, experience,
+          summary, certifications, jobDescription, skills, experiences, education,
+          template, genResume, genCover, genLinkedIn, genATS } = req.body;
+
+  if (!name) return res.status(400).json({ error: "Name is required" });
+
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: "GROQ_API_KEY not set" });
+
+  try {
+    const profileStr = `
+Name: ${name}
+Title: ${title}
+Email: ${email}
+Phone: ${phone}
+Location: ${location}
+LinkedIn: ${linkedin}
+GitHub: ${github}
+Years of Experience: ${experience}
+Summary: ${summary || "Generate a professional summary based on experience"}
+Skills: ${skills?.join(", ")}
+Certifications: ${certifications}
+
+Work Experience:
+${experiences?.map(e => `- ${e.title} at ${e.company} (${e.start} - ${e.end})\n  ${e.desc}`).join("\n\n")}
+
+Education:
+${education?.map(e => `- ${e.degree} from ${e.inst} (${e.year}) ${e.grade ? `- ${e.grade}` : ""}`).join("\n")}
+
+Job Description to tailor for:
+${jobDescription || "No specific job description provided - create a general professional resume"}
+    `;
+
+    const prompt = `You are an expert resume writer and career coach. Based on the following profile, generate a complete resume package.
+
+PROFILE:
+${profileStr}
+
+Generate the following in JSON format (no markdown, no code fences, start with {):
+{
+  "resume": "Complete ATS-optimized resume in plain text format with proper sections: Contact Info, Professional Summary, Skills, Work Experience, Education, Certifications",
+  "coverLetter": ${genCover ? '"Professional cover letter tailored to the job description (3 paragraphs)"' : '"" '},
+  "linkedInSummary": ${genLinkedIn ? '"Compelling LinkedIn About section (3-5 sentences, first person, keyword-rich)"' : '"" '},
+  "atsScore": ${genATS && jobDescription ? 'a number between 0-100 representing keyword match percentage' : '0'},
+  "matchedKeywords": ${genATS && jobDescription ? '["array", "of", "matched", "keywords", "from", "job", "description"]' : '[]'},
+  "missingKeywords": ${genATS && jobDescription ? '["array", "of", "important", "missing", "keywords"]' : '[]'}
+}
+
+Rules:
+- Resume must be ATS-friendly with clear sections
+- Use strong action verbs for bullet points
+- Quantify achievements where possible
+- Tailor content to the job description if provided
+- Template style: ${template}`;
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "llama-3.3-70b-versatile",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 4096,
+      }),
+    });
+
+    const data = await response.json();
+    if (data.error) return res.status(500).json({ error: data.error.message });
+
+    const text = data.choices?.[0]?.message?.content || "";
+    let parsed;
+    try { parsed = JSON.parse(text.trim()); }
+    catch {
+      const s = text.indexOf("{"), e = text.lastIndexOf("}");
+      if (s !== -1 && e > s) { try { parsed = JSON.parse(text.slice(s, e + 1)); } catch { parsed = { resume: text }; } }
+      else { parsed = { resume: text }; }
+    }
+
+    // Increment usage
+    await supabase.from("usage_resume").upsert({
+      user_id: req.user.id, date: today, count: currentCount + 1
+    }, { onConflict: "user_id,date" });
+
+    res.json(parsed);
+
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get("/resume", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "resume", "index.html"));
+});
