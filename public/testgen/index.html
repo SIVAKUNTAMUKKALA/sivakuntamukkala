@@ -398,13 +398,20 @@ let currentUser=null, currentToken=null;
 
 async function initAuth(){
   const {data:{session}}=await sb.auth.getSession();
-  if(session){currentUser=session.user;currentToken=session.access_token;showApp()}
+  if(session){
+    currentUser=session.user;currentToken=session.access_token;
+    // Check if user arrived from password reset link
+    const hash=window.location.hash;
+    if(hash.includes('type=recovery')){
+      showAuth();
+      document.getElementById('loginForm').style.display='none';
+      document.getElementById('forgotForm').style.display='none';
+      document.getElementById('resetForm').style.display='block';
+      return;
+    }
+    showApp();
+  }
   else{showAuth()}
-  sb.auth.onAuthStateChange((_,session)=>{
-    if(session){currentUser=session.user;currentToken=session.access_token;showApp()}
-    else{currentUser=null;currentToken=null;showAuth()}
-  });
-}
 
 function showAuth(){document.getElementById('authScreen').style.display='flex';document.getElementById('appScreen').style.display='none'}
 
@@ -454,6 +461,44 @@ async function handleSignup(){
   if(error){showAuthError(error.message);btn.disabled=false;btn.textContent='Create Account';return}
   document.getElementById('loginSection').style.display='none';
   document.getElementById('verifySection').style.display='block';
+}
+
+  // ── Password Reset ─────────────────────────────────────
+function showForgotPassword(){
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('forgotForm').style.display='block';
+  clearAuthMessages();
+}
+function showLogin(){
+  document.getElementById('forgotForm').style.display='none';
+  document.getElementById('resetForm').style.display='none';
+  document.getElementById('loginForm').style.display='block';
+  clearAuthMessages();
+}
+async function handleForgotPassword(){
+  const email=document.getElementById('forgotEmail').value.trim();
+  if(!email){showAuthError('Please enter your email.');return}
+  const btn=document.getElementById('forgotBtn');
+  btn.disabled=true;btn.textContent='Sending...';
+  const {error}=await sb.auth.resetPasswordForEmail(email,{
+    redirectTo:'https://www.sivakuntamukkala.online/testgen'
+  });
+  if(error){showAuthError(error.message);btn.disabled=false;btn.innerHTML='Send Reset Link';return}
+  showAuthSuccess('Reset link sent! Check your email.');
+  btn.disabled=false;btn.innerHTML='Send Reset Link';
+}
+async function handleResetPassword(){
+  const password=document.getElementById('newPassword').value;
+  const confirm=document.getElementById('confirmNewPassword').value;
+  if(!password){showAuthError('Please enter a new password.');return}
+  if(password.length<6){showAuthError('Password must be at least 6 characters.');return}
+  if(password!==confirm){showAuthError('Passwords do not match.');return}
+  const btn=document.getElementById('resetBtn');
+  btn.disabled=true;btn.textContent='Updating...';
+  const {error}=await sb.auth.updateUser({password});
+  if(error){showAuthError(error.message);btn.disabled=false;btn.textContent='Update Password';return}
+  showAuthSuccess('Password updated! Logging you in...');
+  setTimeout(()=>showApp(),1500);
 }
 
 // ── Logout ─────────────────────────────────────────────
