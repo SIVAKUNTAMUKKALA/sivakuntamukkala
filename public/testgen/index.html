@@ -450,20 +450,43 @@ async function handleLogout() {
 }
 
 // ── Load Usage ─────────────────────────────────────────
-async function loadUsage() {
-  try {
-    const res = await fetch('/usage', { headers: { 'Authorization': `Bearer ${currentToken}` } });
-    const data = await res.json();
-    document.getElementById('usageCount').textContent = data.count || 0;
-    document.getElementById('usageLimit').textContent = data.limit || 10;
-    const used = data.count || 0;
-    const limit = data.limit || 10;
-    if (used >= limit * 0.8) {
-      document.getElementById('limitWarning').style.display = 'block';
-      document.getElementById('limitUsed').textContent = used;
+async function loadUsage(){
+  try{
+    const res=await fetch('/usage',{headers:{'Authorization':`Bearer ${currentToken}`}});
+    const data=await res.json();
+    const used=data.count||0;
+    const limit=data.limit||10;
+    document.getElementById('usageCount').textContent=used;
+    document.getElementById('usageLimit').textContent=limit;
+
+    // Show warning at 80%
+    if(used>=limit*0.8 && used<limit){
+      document.getElementById('limitWarning').style.display='block';
+      document.getElementById('limitUsed').textContent=used;
     }
-  } catch(e) { console.log('Usage load failed', e); }
+
+    // Disable generate button when limit reached
+    if(used>=limit){
+      const btn=document.getElementById('genBtn');
+      btn.disabled=true;
+      btn.innerHTML='🚫 Daily limit reached ('+used+'/'+limit+') — Resets at midnight';
+      document.getElementById('limitWarning').style.display='block';
+      document.getElementById('limitUsed').textContent=used;
+      document.getElementById('limitWarning').innerHTML=`
+        ⚠️ You've used all <strong>${limit} free generations</strong> for today.<br>
+        Limit resets at <strong>midnight UTC</strong>. 
+        <strong style="color:var(--green)">Upgrade to Pro</strong> for unlimited access.
+      `;
+    }
+  }catch(e){console.log('Usage load failed',e)}
 }
+```
+
+---
+
+Commit → deploy → and when the limit is hit users will see:
+```
+🚫 Daily limit reached (10/10) — Resets at midnight
 
 // ── App State ──────────────────────────────────────────
 let provider='groq', selectedFWs=[], lang='JavaScript', allResults={}, activeFW=null, activeFileTab=0;
