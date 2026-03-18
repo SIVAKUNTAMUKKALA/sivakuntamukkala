@@ -12,6 +12,7 @@
     "node-fetch": "^2.7.0",
     "dotenv": "^16.3.1",
     "@supabase/supabase-js": "^2.39.0",
-    "razorpay": "^2.9.2"
+    "razorpay": "^2.9.2",
+    "@anthropic-ai/sdk": "^0.36.0"
   }
 }
