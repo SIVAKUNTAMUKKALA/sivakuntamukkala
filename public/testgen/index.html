@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <style>
 :root[data-theme="dark"]{--bg:#0a0a0f;--bg2:#111118;--bg3:#0d0d14;--bg4:#14141c;--border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.10);--text1:#f1f5f9;--text2:#94a3b8;--text3:#475569;--text4:#1e293b;--green:#4ade80;--green-bg:rgba(74,222,128,0.08);--green-bdr:rgba(74,222,128,0.25);--green-dark:#052e16;--cyan:#06b6d4;--code-text:#64748b;--shadow:0 10px 28px rgba(0,0,0,0.4);--danger:#ef4444;--danger-bg:rgba(239,68,68,0.08)}
 :root[data-theme="light"]{--bg:#f8fafc;--bg2:#ffffff;--bg3:#f1f5f9;--bg4:#e2e8f0;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);--text1:#0f172a;--text2:#475569;--text3:#94a3b8;--text4:#cbd5e1;--green:#16a34a;--green-bg:rgba(22,163,74,0.08);--green-bdr:rgba(22,163,74,0.25);--green-dark:#f0fdf4;--cyan:#0891b2;--code-text:#334155;--shadow:0 10px 28px rgba(0,0,0,0.08);--danger:#ef4444;--danger-bg:rgba(239,68,68,0.08)}
@@ -53,6 +54,23 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text1);min-
 .usage-count{font-weight:700;color:var(--green)}
 .logout-btn{background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:12px;padding:6px 12px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s}
 .logout-btn:hover{border-color:var(--danger);color:var(--danger)}
+.pro-badge{display:inline-flex;align-items:center;gap:5px;background:linear-gradient(135deg,rgba(255,215,0,0.15),rgba(255,165,0,0.1));border:1px solid rgba(255,215,0,0.3);border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700;color:#fbbf24}
+.upgrade-btn{background:linear-gradient(135deg,#fbbf24,#f59e0b);border:none;border-radius:8px;color:#1a0a00;font-size:12px;font-weight:700;padding:6px 14px;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;white-space:nowrap}
+.upgrade-btn:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(251,191,36,0.4)}
+.pricing-card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:28px;margin-top:20px;display:none;animation:slideUp 0.35s ease}
+.pricing-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.plan-card{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center;transition:all 0.2s;position:relative}
+.plan-card.popular{border-color:rgba(251,191,36,0.4);background:rgba(251,191,36,0.04)}
+.plan-card:hover{border-color:var(--border2);transform:translateY(-2px)}
+.plan-name{font-size:13px;font-weight:700;color:var(--text1);margin-bottom:4px}
+.plan-price-inr{font-size:28px;font-weight:800;color:var(--green);line-height:1}
+.plan-price-usd{font-size:12px;color:var(--text3);margin-bottom:12px}
+.plan-feature{font-size:12px;color:var(--text2);margin-bottom:5px;text-align:left;display:flex;align-items:center;gap:6px}
+.plan-btn{width:100%;padding:10px;margin-top:14px;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s}
+.plan-btn-pro{background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a0a00}
+.plan-btn-pro:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(251,191,36,0.4)}
+.plan-btn-free{background:var(--bg2);border:1px solid var(--border);color:var(--text2)}
+.popular-badge{position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,#fbbf24,#f59e0b);color:#1a0a00;font-size:10px;font-weight:700;padding:2px 12px;border-radius:999px;white-space:nowrap}
 .theme-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--bg2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.2s}
 
 /* HERO */
@@ -227,7 +245,9 @@ textarea::placeholder{color:var(--text4)}
       </div>
     </a>
     <div class="topbar-right">
-      <div class="usage-pill"><span class="usage-count" id="usageCount">0</span><span>/ <span id="usageLimit">10</span> today</span></div>
+      <div class="usage-pill" id="usagePill"><span class="usage-count" id="usageCount">0</span><span>/ <span id="usageLimit">10</span> today</span></div>
+      <div class="pro-badge" id="proBadge" style="display:none">👑 Pro</div>
+      <button class="upgrade-btn" id="upgradeBtn" onclick="showPricing()" style="display:none">⚡ Upgrade</button>
       <div class="user-pill"><div class="user-avatar" id="userAvatar">U</div><span id="userEmail">user</span></div>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
       <button class="logout-btn" onclick="handleLogout()">Logout</button>
@@ -288,6 +308,38 @@ textarea::placeholder{color:var(--text4)}
     <div class="limit-warning" id="limitWarning">⚠️ You've used <span id="limitUsed">0</span>/10 free generations today. Upgrade to Pro for unlimited access.</div>
   </div>
 
+  <!-- PRICING CARD -->
+  <div class="pricing-card" id="pricingCard">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div style="font-size:16px;font-weight:800;color:var(--text1)">Upgrade to Pro ⚡</div>
+      <button onclick="hidePricing()" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:18px;line-height:1">×</button>
+    </div>
+    <div style="font-size:13px;color:var(--text3);margin-bottom:16px">Unlimited generations, every day. Cancel anytime.</div>
+    <div class="pricing-grid">
+      <div class="plan-card popular">
+        <div class="popular-badge">Most Popular</div>
+        <div class="plan-name">Pro Monthly</div>
+        <div class="plan-price-inr">₹99</div>
+        <div class="plan-price-usd">~$1.2 / month</div>
+        <div class="plan-feature">✅ Unlimited generations</div>
+        <div class="plan-feature">✅ All 4 frameworks</div>
+        <div class="plan-feature">✅ Download scripts</div>
+        <div class="plan-feature">✅ Priority support</div>
+        <button class="plan-btn plan-btn-pro" onclick="startCheckout()">Get Pro — ₹99/mo</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">Free Forever</div>
+        <div class="plan-price-inr" style="color:var(--text2)">₹0</div>
+        <div class="plan-price-usd">Always free</div>
+        <div class="plan-feature">✅ 10 generations/day</div>
+        <div class="plan-feature">✅ All 4 frameworks</div>
+        <div class="plan-feature">✅ Download scripts</div>
+        <div class="plan-feature" style="color:var(--text4)">❌ Limited usage</div>
+        <button class="plan-btn plan-btn-free" onclick="hidePricing()">Stay on Free</button>
+      </div>
+    </div>
+  </div>
+
   <div class="error-box" id="errorBox"></div>
 
   <button class="gen-btn" id="genBtn" onclick="generate()">
@@ -344,6 +396,7 @@ async function showApp(){
   const email=currentUser.email;
   document.getElementById('userEmail').textContent=email.split('@')[0];
   document.getElementById('userAvatar').textContent=email[0].toUpperCase();
+  const cfg=await fetch('/config').then(r=>r.json());window.RAZORPAY_KEY=cfg.razorpay_key;
   await loadUsage();
 }
 
@@ -393,19 +446,28 @@ async function loadUsage(){
   try{
     const res=await fetch('/usage',{headers:{'Authorization':`Bearer ${currentToken}`}});
     const data=await res.json();
-    const used=data.count||0,limit=data.limit||10;
-    document.getElementById('usageCount').textContent=used;
-    document.getElementById('usageLimit').textContent=limit;
-    if(used>=limit*0.8&&used<limit){
-      document.getElementById('limitWarning').style.display='block';
-      document.getElementById('limitUsed').textContent=used;
-    }
-    if(used>=limit){
-      const btn=document.getElementById('genBtn');
-      btn.disabled=true;
-      btn.innerHTML='🚫 Daily limit reached ('+used+'/'+limit+') — Resets at midnight UTC';
-      document.getElementById('limitWarning').style.display='block';
-      document.getElementById('limitWarning').innerHTML='⚠️ You\'ve used all <strong>'+limit+' free generations</strong> today. Limit resets at <strong>midnight UTC</strong>. Upgrade to Pro for unlimited access.';
+    const used=data.count||0,limit=data.limit||10,plan=data.plan||'free';
+    currentPlan=plan;
+    document.getElementById('usageCount').textContent=plan==='pro'?'∞':used;
+    document.getElementById('usageLimit').textContent=plan==='pro'?'∞':limit;
+    // Show pro badge or upgrade button
+    if(plan==='pro'){
+      document.getElementById('proBadge').style.display='flex';
+      document.getElementById('upgradeBtn').style.display='none';
+      document.getElementById('usagePill').style.display='none';
+    } else {
+      document.getElementById('upgradeBtn').style.display='block';
+      if(used>=limit*0.8&&used<limit){
+        document.getElementById('limitWarning').style.display='block';
+        document.getElementById('limitUsed').textContent=used;
+      }
+      if(used>=limit){
+        const btn=document.getElementById('genBtn');
+        btn.disabled=true;
+        btn.innerHTML='🚫 Daily limit reached — <span style="text-decoration:underline;cursor:pointer" onclick="showPricing()">Upgrade to Pro</span>';
+        document.getElementById('limitWarning').style.display='block';
+        document.getElementById('limitWarning').innerHTML='⚠️ You\'ve used all <strong>'+limit+' free generations</strong> today. <strong style="color:var(--green);cursor:pointer" onclick="showPricing()">Upgrade to Pro →</strong> for unlimited access.';
+      }
     }
   }catch(e){console.log('Usage load failed',e)}
 }
@@ -472,6 +534,57 @@ function downloadCode(){const tab=(allResults[activeFW]?.tabs||[])[activeFileTab
 function showError(msg){const b=document.getElementById('errorBox');b.textContent='⚠ '+msg;b.style.display='block'}
 
 document.getElementById('codeOut').addEventListener('scroll',function(){document.getElementById('lineNums').scrollTop=this.scrollTop});
+
+// ── Pricing & Razorpay ────────────────────────────────────
+let currentPlan = 'free';
+
+function showPricing(){document.getElementById('pricingCard').style.display='block';document.getElementById('pricingCard').scrollIntoView({behavior:'smooth',block:'center'})}
+function hidePricing(){document.getElementById('pricingCard').style.display='none'}
+
+async function startCheckout(){
+  try{
+    const btn=document.querySelector('.plan-btn-pro');
+    btn.textContent='Creating order...';btn.disabled=true;
+    const res=await fetch('/create-subscription',{method:'POST',headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`}});
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+
+    const options={
+      key: window.RAZORPAY_KEY,
+      subscription_id: data.subscription_id,
+      name: 'TestGen AI',
+      description: 'Pro Plan — Unlimited generations',
+      image: 'https://www.sivakuntamukkala.online/favicon.ico',
+      prefill:{email: currentUser.email},
+      theme:{color:'#4ade80'},
+      handler: async function(response){
+        const vres=await fetch('/verify-payment',{
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${currentToken}`},
+          body:JSON.stringify({
+            razorpay_payment_id:response.razorpay_payment_id,
+            razorpay_subscription_id:response.razorpay_subscription_id,
+            razorpay_signature:response.razorpay_signature
+          })
+        });
+        const vdata=await vres.json();
+        if(vdata.success){
+          hidePricing();
+          await loadUsage();
+          alert('🎉 Welcome to Pro! You now have unlimited generations.');
+        }
+      },
+      modal:{ondismiss:function(){btn.textContent='Get Pro — ₹99/mo';btn.disabled=false}}
+    };
+    const rzp=new Razorpay(options);
+    rzp.open();
+    btn.textContent='Get Pro — ₹99/mo';btn.disabled=false;
+  }catch(e){
+    alert('Error: '+e.message);
+    document.querySelector('.plan-btn-pro').textContent='Get Pro — ₹99/mo';
+    document.querySelector('.plan-btn-pro').disabled=false;
+  }
+}
 
 // ── Boot ───────────────────────────────────────────────
 initAuth();
