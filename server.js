@@ -8,6 +8,17 @@ const { createClient } = require("@supabase/supabase-js");
 const app = express();
 app.use(cors());
 app.use(express.json());
+// Serve portfolio explicitly at root
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Serve testgen app
+app.get("/testgen", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "testgen", "index.html"));
+});
+
+// Serve static assets
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/testgen", express.static(path.join(__dirname, "public/testgen")));
 
