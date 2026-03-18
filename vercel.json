@@ -46,6 +46,14 @@
     {
       "src": "/cancel-subscription",
       "dest": "/server.js"
+    },
+    {
+      "src": "/admin/stats",
+      "dest": "/server.js"
+    },
+    {
+      "src": "/admin",
+      "dest": "/server.js"
     }
   ]
 }
