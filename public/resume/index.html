@@ -83,8 +83,11 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text1);min-
 .add-more{width:100%;padding:9px;background:transparent;border:1px dashed var(--border2);border-radius:8px;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;transition:all 0.2s;margin-bottom:12px}
 .add-more:hover{border-color:var(--gold-bdr);color:var(--gold);background:var(--gold-bg)}
 .skill-row{display:flex;gap:8px;margin-bottom:8px}
-.skill-row input{flex:1}
-.skill-row button{background:var(--gold-bg);border:1px solid var(--gold-bdr);border-radius:8px;color:var(--gold);font-size:12px;font-weight:600;padding:0 12px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap}
+.skill-row input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text1);font-size:13px;padding:9px 12px;font-family:'Inter',sans-serif;outline:none;transition:all 0.2s}
+.skill-row input:focus{border-color:var(--gold-bdr);box-shadow:0 0 0 3px var(--gold-bg)}
+.skill-row input::placeholder{color:var(--text4)}
+.skill-row button{background:linear-gradient(135deg,var(--gold),#f59e0b);border:none;border-radius:8px;color:#1a0a00;font-size:12px;font-weight:700;padding:0 16px;cursor:pointer;font-family:'Inter',sans-serif;white-space:nowrap;transition:all 0.2s}
+.skill-row button:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(251,191,36,0.3)}
 .skills-list{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
 .skill-chip{display:inline-flex;align-items:center;gap:5px;background:var(--gold-bg);border:1px solid var(--gold-bdr);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:600;color:var(--gold)}
 .skill-chip button{background:none;border:none;color:var(--gold);cursor:pointer;font-size:13px;line-height:1;padding:0;opacity:0.7}
